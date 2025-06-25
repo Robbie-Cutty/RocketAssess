@@ -48,7 +48,7 @@ services:
 
 databases:
 - name: db
-  engine: PG
-  version: "15"
+  engine: MYSQL
+  version: "8"
   production: false
-  cluster_name: rocket-assess-db 
+  cluster_name: rocket-assess-mysql-db 

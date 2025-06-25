@@ -55,30 +55,23 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
-# Use PostgreSQL for production, MySQL for development
-if os.environ.get('DATABASE_URL'):
-    # Production: Use PostgreSQL from DigitalOcean
-    DATABASES = {
-        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+# Use MySQL for both development and production
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST'),
+        'PORT': env('DB_PORT'),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+        },
+        'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
     }
-else:
-    # Development: Use MySQL
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': env('DB_NAME'),
-            'USER': env('DB_USER'),
-            'PASSWORD': env('DB_PASSWORD'),
-            'HOST': env('DB_HOST'),
-            'PORT': env('DB_PORT'),
-            'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-                'charset': 'utf8mb4',
-            },
-            'CONN_MAX_AGE': 60,
-            'CONN_HEALTH_CHECKS': True,
-        }
-    }
+}
 
 # # Use SQLite for quick local testing (commented out)
 # DATABASES = {
