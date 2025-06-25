@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths: 
       - 'frontend/**'
+      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -42,6 +43,10 @@ jobs:
         npm run build
       env:
         VITE_API_URL: https://rocketassess-production.up.railway.app
+    
+    - name: Add .nojekyll to build output
+      run: |
+        touch frontend/dist/.nojekyll
     
     - name: Setup Pages
       uses: actions/configure-pages@v4
