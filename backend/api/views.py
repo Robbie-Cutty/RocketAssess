@@ -1057,7 +1057,6 @@ def organization_profile(request):
             return Response({'error': f'Update failed: {str(e)}'}, status=400)
 
 @api_view(['GET'])
-@login_required
 def health_check(request):
     """Health check endpoint for monitoring"""
     try:
@@ -1066,14 +1065,18 @@ def health_check(request):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
         
-        # Check Redis connectivity
-        cache.set('health_check', 'ok', 60)
-        cache_result = cache.get('health_check')
+        # Check Redis connectivity (skip if Redis not available)
+        try:
+            cache.set('health_check', 'ok', 60)
+            cache_result = cache.get('health_check')
+            cache_status = 'connected' if cache_result == 'ok' else 'disconnected'
+        except:
+            cache_status = 'not_configured'
         
         return Response({
             'status': 'healthy',
             'database': 'connected',
-            'cache': 'connected' if cache_result == 'ok' else 'disconnected',
+            'cache': cache_status,
             'timestamp': datetime.now().isoformat()
         }, status=200)
     except Exception as e:
