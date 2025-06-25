@@ -212,17 +212,12 @@ os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 # Cache Configuration
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': env('REDIS_URL', default='redis://127.0.0.1:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
 
-# Use Redis for session storage
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'default'
+# Use database for session storage instead of Redis
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # Cache time to live is 15 minutes
 CACHE_TTL = 60 * 15
