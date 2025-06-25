@@ -4,6 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: process.env.NODE_ENV === 'production' ? '/RocketAssess/' : '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'), // 👈 Enables '@/components' shorthand
@@ -24,5 +25,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+  },
+  define: {
+    'process.env.VITE_API_URL': JSON.stringify(
+      process.env.VITE_API_URL || 'http://localhost:8000'
+    ),
   },
 });
