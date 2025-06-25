@@ -10,7 +10,7 @@ env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, '../.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-default-key-for-testing-only')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
@@ -21,7 +21,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '0.0.0.0',
     # Add your production domain here
-    env('ALLOWED_HOST', ''),
+    env('ALLOWED_HOST', default=''),
     # DigitalOcean App Platform domains
     '.ondigitalocean.app',
     # Add any other domains you'll use
@@ -59,11 +59,11 @@ ROOT_URLCONF = 'core.urls'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
+        'NAME': env('DB_NAME', default='test_db'),
+        'USER': env('DB_USER', default='test_user'),
+        'PASSWORD': env('DB_PASSWORD', default='test_password'),
+        'HOST': env('DB_HOST', default='localhost'),
+        'PORT': env('DB_PORT', default='3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8mb4',
