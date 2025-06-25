@@ -1,14 +1,34 @@
 import os
 import environ
+from pathlib import Path
+import dj_database_url
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, '../.env'))
 
+# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
+
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
-ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
+
+# Update allowed hosts for production
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    # Add your production domain here
+    env('ALLOWED_HOST', ''),
+    # DigitalOcean App Platform domains
+    '.ondigitalocean.app',
+    # Add any other domains you'll use
+]
+
+# Remove empty strings from ALLOWED_HOSTS
+ALLOWED_HOSTS = [host for host in ALLOWED_HOSTS if host]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -35,23 +55,30 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
-# Use MySQL for production and development
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        },
-        'CONN_MAX_AGE': 60,  # Persistent connections
-        'CONN_HEALTH_CHECKS': True,
+# Use PostgreSQL for production, MySQL for development
+if os.environ.get('DATABASE_URL'):
+    # Production: Use PostgreSQL from DigitalOcean
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
     }
-}
+else:
+    # Development: Use MySQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': env('DB_NAME'),
+            'USER': env('DB_USER'),
+            'PASSWORD': env('DB_PASSWORD'),
+            'HOST': env('DB_HOST'),
+            'PORT': env('DB_PORT'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'charset': 'utf8mb4',
+            },
+            'CONN_MAX_AGE': 60,
+            'CONN_HEALTH_CHECKS': True,
+        }
+    }
 
 # # Use SQLite for quick local testing (commented out)
 # DATABASES = {
