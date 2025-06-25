@@ -1,0 +1,85 @@
+.student-register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6f8fa;
+}
+
+.student-register-form {
+  background: #fff;
+  padding: 2.5rem 2rem 2rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.student-register-form h2 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+
+.student-register-form input,
+.student-register-form select {
+  padding: 1rem 1.2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  background: #f9fafb;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.student-register-form input:focus,
+.student-register-form select:focus {
+  border-color: #6366f1;
+  outline: none;
+  box-shadow: 0 0 0 2px #6366f133;
+}
+
+.student-register-form button {
+  width: 100%;
+  padding: 0.8rem 0;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.student-register-form button:hover {
+  background: #4f46e5;
+}
+
+.form-message {
+  margin-top: 0.5rem;
+  text-align: center;
+  color: #10b981;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .student-register-form {
+    padding: 1.2rem 0.5rem;
+    max-width: 98vw;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+} 

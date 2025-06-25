@@ -1,0 +1,129 @@
+/* OrgProfile.css */
+
+.org-profile-bg {
+  min-height: 100vh;
+  background: #f6f8fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 8px;
+}
+
+.org-profile-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  max-width: 480px;
+  width: 100%;
+  padding: 40px 32px 32px 32px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.org-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.org-profile-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #22223b;
+  margin: 0;
+}
+
+.org-profile-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 0;
+}
+
+.org-profile-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 1rem;
+  color: #22223b;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.org-profile-back:hover {
+  background: #e0e7ef;
+}
+
+.org-profile-badge {
+  background: linear-gradient(90deg, #2563eb 60%, #6366f1 100%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 18px 0 12px 0;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.org-profile-badge-label {
+  font-size: 1rem;
+  opacity: 0.85;
+  font-weight: 500;
+}
+.org-profile-badge-code {
+  font-size: 1.6rem;
+  font-family: 'Fira Mono', 'Menlo', 'Consolas', monospace;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.org-profile-details {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.org-profile-details-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #22223b;
+  margin-bottom: 8px;
+}
+.org-profile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.org-profile-detail-label {
+  color: #64748b;
+  font-size: 1rem;
+  min-width: 120px;
+  font-weight: 500;
+}
+.org-profile-detail-value {
+  color: #22223b;
+  font-size: 1rem;
+  font-weight: 500;
+  word-break: break-all;
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .org-profile-card {
+    padding: 18px 4vw 18px 4vw;
+    max-width: 98vw;
+  }
+  .org-profile-title {
+    font-size: 1.3rem;
+  }
+  .org-profile-details-title {
+    font-size: 1rem;
+  }
+  .org-profile-detail-label, .org-profile-detail-value {
+    font-size: 0.98rem;
+  }
+} 
