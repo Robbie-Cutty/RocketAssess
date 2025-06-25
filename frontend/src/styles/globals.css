@@ -33,9 +33,10 @@ img {
   padding-right: 1rem;
 }
 .flex { display: flex; }
+.flex-1 { flex: 1; }
+.flex-col { flex-direction: column; }
 .items-center { align-items: center; }
 .justify-center { justify-content: center; }
-.flex-col { flex-direction: column; }
 .gap-2 { gap: 0.5rem; }
 .gap-3 { gap: 0.75rem; }
 .gap-4 { gap: 1rem; }
@@ -43,6 +44,20 @@ img {
 .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* Height and spacing utilities */
+.min-h-screen { min-height: 100vh; }
+.py-10 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+.py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.mt-8 { margin-top: 2rem; }
+.mt-6 { margin-top: 1.5rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-5 { margin-bottom: 1.25rem; }
+
+/* Text utilities */
+.text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
 
 /* =========================
    3. NAVBAR, HEADER, FOOTER
@@ -199,25 +214,26 @@ img {
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 0.5rem 0.9rem;
+  padding: 0.6rem 1rem;
   border: 1.5px solid #d1d5db;
   border-radius: 0.5rem;
   font-size: 1rem;
-  outline: none;
-  transition: border 0.2s;
+  background: #fff;
+  transition: border-color 0.2s;
 }
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
+  outline: none;
   border-color: #2563eb;
 }
 .form-error {
-  color: #dc2626;
+  color: #b91c1c;
   font-size: 0.95rem;
-  margin-top: 0.2rem;
+  margin-top: 0.3rem;
 }
 .border-danger {
-  border-color: #dc2626 !important;
+  border-color: #b91c1c !important;
 }
 
 /* =========================
@@ -244,63 +260,66 @@ img {
 .p-6 { padding: 1.5rem; }
 
 /* =========================
-   6. RESPONSIVE TWEAKS
+   6. RESPONSIVE DESIGN
    ========================= */
 @media (max-width: 900px) {
   .container { max-width: 100vw; }
   .navbar { flex-direction: column; padding: 1rem; }
   .navbar-links { flex-wrap: wrap; gap: 0.75rem; }
   .card { padding: 1rem; }
+  .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .container { padding-left: 0.5rem; padding-right: 0.5rem; }
   .navbar { padding: 0.5rem 0.5rem; }
   .card { padding: 0.5rem; }
   .card-header { font-size: 1.1rem; }
+  .text-4xl { font-size: 1.875rem; line-height: 2.25rem; }
+  .text-2xl { font-size: 1.25rem; line-height: 1.75rem; }
 }
 
+/* =========================
+   7. DASHBOARD BUTTONS
+   ========================= */
 .dashboard-btn {
-  min-width: 3;
-  min-height: 22px;
-  font-size: 1.35rem;
-  font-weight: 700;
-  border-radius: 10px;
-  padding: 8px 0 6px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px #2563eb22;
-  transition: background 0.2s, color 0.2s, border 0.2s, transform 0.2s;
-  background-color: #2563eb;
-  color: #fff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+  min-height: 8rem;
+  text-align: center;
 }
 .dashboard-btn .dashboard-btn-icon {
-  font-size: 1.15rem;
-  margin-bottom: 2px;
-  display: block;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
 }
-
-.dashboard-btn-primary:hover {
-  background: linear-gradient(90deg, #1e40af 70%, #6366f1 100%);
-  transform: translateY(-2px) scale(1.04);
-}
-.dashboard-btn-outline:hover {
+.dashboard-btn-primary {
   background: #2563eb;
   color: #fff;
-  border-color: #2563eb;
-  transform: translateY(-2px) scale(1.04);
+}
+.dashboard-btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+.dashboard-btn-outline:hover {
+  background: #f3f4f6;
+  transform: translateY(-2px);
 }
 
+/* Dashboard button grid */
 .dashboard-btn-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-top: 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 @media (max-width: 900px) {
   .dashboard-btn-row {
     grid-template-columns: 1fr;
-    gap: 1.2rem;
   }
 } 
