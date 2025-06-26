@@ -42,7 +42,7 @@ jobs:
         cd frontend
         npm run build
       env:
-        VITE_API_URL: https://rocketassess-production.up.railway.app
+        VITE_API_URL: https://rocketassess.onrender.com
     
     - name: Add .nojekyll to build output
       run: |

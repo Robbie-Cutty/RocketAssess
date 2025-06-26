@@ -1,6 +1,7 @@
 import os
 import environ
 from pathlib import Path
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +27,9 @@ ALLOWED_HOSTS = [
     '.up.railway.app',
     # DigitalOcean App Platform domains
     '.ondigitalocean.app',
+    # Render.com domains
+    '.onrender.com',
+    'rocketassess.onrender.com',
     # Add any other domains you'll use
 ]
 
@@ -58,23 +62,33 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
-# Use MySQL for both development and production
+# Database Configuration - Support both PostgreSQL (Render) and MySQL (Railway)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB_NAME', default='test_db'),
-        'USER': env('DB_USER', default='test_user'),
-        'PASSWORD': env('DB_PASSWORD', default='test_password'),
-        'HOST': env('DB_HOST', default='localhost'),
-        'PORT': env('DB_PORT', default='3306'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        },
-        'CONN_MAX_AGE': 60,
-        'CONN_HEALTH_CHECKS': True,
-    }
+    'default': dj_database_url.config(
+        default=f"postgresql://{env('DB_USER', default='postgres')}:{env('DB_PASSWORD', default='password')}@{env('DB_HOST', default='localhost')}:{env('DB_PORT', default='5432')}/{env('DB_NAME', default='rocketassess')}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
+
+# Override with MySQL if specifically using Railway
+if env('USE_MYSQL', default=False):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': env('DB_NAME', default='railway'),
+            'USER': env('DB_USER', default='root'),
+            'PASSWORD': env('DB_PASSWORD', default=''),
+            'HOST': env('DB_HOST', default='mysql.railway.internal'),
+            'PORT': env('DB_PORT', default='3306'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'charset': 'utf8mb4',
+            },
+            'CONN_MAX_AGE': 60,
+            'CONN_HEALTH_CHECKS': True,
+        }
+    }
 
 # # Use SQLite for quick local testing (commented out)
 # DATABASES = {
