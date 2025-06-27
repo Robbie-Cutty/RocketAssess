@@ -41,7 +41,6 @@ const Dashboard = () => {
     }
     const fetchTeachers = async () => {
       try {
-        console.log('Fetching teachers for org_code:', code);
         const response = await api.get(`/api/teachers/?org_code=${code}`);
         if (response.status === 200) {
           const data = response.data;

@@ -30,7 +30,7 @@ A modern, secure, and scalable assessment platform built with **React (frontend)
 ## 🏗️ Architecture
 
 ```
-rocket/
+ask/
 ├── backend/                  # Django backend
 │   ├── api/                 # Main application
 │   │   ├── models.py        # Database models

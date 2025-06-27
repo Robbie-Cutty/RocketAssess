@@ -82,7 +82,7 @@ function App() {
                 </ProtectedRoute>
               } />
               
-              <Route path="/test-review/:testId" element={
+              <Route path="/review/:submissionId" element={
                 <ProtectedRoute>
                   <TestReview />
                 </ProtectedRoute>

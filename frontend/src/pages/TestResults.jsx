@@ -10,9 +10,10 @@ const TestResults = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const fetchTestResults = () => {
     if (!testId) return;
     setLoading(true);
+    setError('');
     Promise.all([
       api.get(`/api/test-attendance/?test_id=${testId}`),
       api.get(`/api/test-submissions/?test_id=${testId}`)
@@ -28,6 +29,10 @@ const TestResults = () => {
         setError('Failed to fetch test results.');
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchTestResults();
   }, [testId]);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
@@ -104,7 +109,16 @@ const TestResults = () => {
             </tbody>
           </table>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/teacher-dashboard')}>Back to Dashboard</button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            className="btn btn-outline" 
+            onClick={fetchTestResults}
+            disabled={loading}
+          >
+            {loading ? 'Refreshing...' : '🔄 Refresh'}
+          </button>
+          <button className="btn btn-primary" onClick={() => navigate('/teacher-dashboard')}>Back to Dashboard</button>
+        </div>
       </div>
     </div>
   );

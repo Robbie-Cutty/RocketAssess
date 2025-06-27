@@ -104,20 +104,12 @@ const TeacherDashboard = () => {
       const nameFromCookie = Cookies.get('teacher_name');
       const orgNameFromCookie = Cookies.get('org_name');
       
-      console.log('TeacherDashboard: Initializing auth data...');
-      console.log('- PK from cookie:', pkFromCookie);
-      console.log('- PK from localStorage:', pkFromStorage);
-      console.log('- Name from cookie:', nameFromCookie);
-      
       const pk = pkFromCookie || pkFromStorage;
       
       if (pk) {
         setTeacherPk(pk);
         setTeacherName(nameFromCookie || '');
         setOrgName(orgNameFromCookie || '');
-        console.log('TeacherDashboard: Auth data set, teacherPk:', pk);
-      } else {
-        console.log('TeacherDashboard: No teacher PK found');
       }
       
       setIsLoading(false);
@@ -186,7 +178,6 @@ const TeacherDashboard = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
       // Fallback to basic calculations
       const totalTests = testData.length;
       setAnalytics({
@@ -220,7 +211,6 @@ const TeacherDashboard = () => {
         setPoolError('Failed to fetch question pool.');
       }
     } catch (err) {
-      console.error('Network error in fetchQuestionPool:', err); // Improved error logging
       setPoolError('Network error.');
     } finally {
       setPoolLoading(false);

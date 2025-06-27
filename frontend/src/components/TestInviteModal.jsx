@@ -115,11 +115,9 @@ const TestInviteModal = ({ isOpen, onClose, test, testId, onInvite }) => {
       point_value: pointValue,
       test_id: testId
     };
-    console.log('[DEBUG] Sending test invite data:', inviteData);
     try {
       const res = await api.post('/api/invite-test/', inviteData);
       const data = res.data;
-      console.log('[DEBUG] Received response:', data);
       if (res.status === 409 && data.duplicates) {
         setError(
           `The following students have already been invited to this test: ${data.duplicates.join(', ')}`

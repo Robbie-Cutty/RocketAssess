@@ -576,9 +576,7 @@ def teacher_students(request):
 @api_view(['POST'])
 @login_required
 def invite_test(request):
-    print("[DEBUG] Received test invite request")
     data = request.data
-    print(f"[DEBUG] Request data: {data}")
     
     teacher_name = data.get('teacher_name')
     students = data.get('students', [])
@@ -590,26 +588,18 @@ def invite_test(request):
     point_value = data.get('point_value')
     test_id = data.get('test_id')  # New field
 
-    print(f"[DEBUG] Parsed data: teacher_name={teacher_name}, students={students}, time_to_start={time_to_start}, duration={duration_minutes}, title={title}, subject={subject}, points={point_value}, test_id={test_id}")
-
     # Improved error handling
     if not teacher_name or not teacher_name.strip():
-        print("[ERROR] Teacher name is missing")
         return Response({'error': 'Teacher name is required.'}, status=400)
     if not students or not isinstance(students, list) or len(students) == 0:
-        print("[ERROR] No students selected")
         return Response({'error': 'At least one student must be selected.'}, status=400)
     if not time_to_start:
-        print("[ERROR] Start time is missing")
         return Response({'error': 'Start time is required.'}, status=400)
     if not title:
-        print("[ERROR] Test title is missing")
         return Response({'error': 'Test title is required.'}, status=400)
     if not subject:
-        print("[ERROR] Test subject is missing")
         return Response({'error': 'Test subject is required.'}, status=400)
     if point_value is None or point_value == '':
-        print("[ERROR] Point value is missing")
         return Response({'error': 'Point value is required.'}, status=400)
 
     # Get the test object if test_id is provided
@@ -617,18 +607,14 @@ def invite_test(request):
     if test_id:
         try:
             test = Test.objects.get(id=test_id)
-            print(f"[DEBUG] Found test with ID: {test_id}")
         except Test.DoesNotExist:
-            print(f"[ERROR] Test with ID {test_id} not found")
             return Response({'error': f'Test with ID {test_id} not found.'}, status=404)
 
     # Calculate end_time
     try:
         start_dt = datetime.fromisoformat(time_to_start)
         end_dt = start_dt + timedelta(minutes=duration_minutes)
-        print(f"[DEBUG] Calculated end time: {end_dt}")
     except Exception as e:
-        print(f"[ERROR] Failed to parse time: {e}")
         return Response({'error': 'Invalid time format.'}, status=400)
 
     # Anti-duplicate logic
@@ -641,7 +627,6 @@ def invite_test(request):
         ).exists():
             duplicates.append(student_email)
     if duplicates:
-        print(f"[ERROR] Duplicate invites detected for: {duplicates}")
         return Response({
             'error': 'Duplicate invite(s) detected.',
             'duplicates': duplicates
@@ -663,13 +648,10 @@ def invite_test(request):
                 point_value=point_value,
                 end_time=end_dt,
             )
-            print(f"[DEBUG] Created TestInvite with ID: {invite.id}, linked to test: {test.id if test else 'None'}")
             results.append({'email': student_email, 'status': 'invited'})
         except Exception as e:
-            print(f"[ERROR] Failed to create TestInvite for {student_email}: {e}")
             results.append({'email': student_email, 'status': 'error', 'error': str(e)})
 
-    print(f"[DEBUG] Returning results: {results}")
     return Response({'results': results}, status=200)
 
 @api_view(['GET'])

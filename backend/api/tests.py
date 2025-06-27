@@ -85,8 +85,6 @@ class OrganizationTests(BaseTestCase):
             'city': 'Toronto'
         }
         response = self.client.post(url, data, format='json')
-        if response.status_code != status.HTTP_201_CREATED:
-            print('test_valid_registration error:', response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('message', response.data)
 
@@ -137,8 +135,6 @@ class TeacherTests(BaseTestCase):
             'org_code': 'TEST001'
         }
         response = self.client.post(url, data, format='json')
-        if response.status_code != status.HTTP_201_CREATED:
-            print('test_teacher_registration error:', response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('teacher', response.data)
 

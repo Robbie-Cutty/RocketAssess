@@ -76,7 +76,6 @@ const Login = () => {
         body: JSON.stringify(payload),
       });
       const data = await response.json();
-      console.log('Login response:', data);
       if (response.status === 200) {
         // Clear all user-related cookies before setting new ones
         Cookies.remove('token');
@@ -100,7 +99,6 @@ const Login = () => {
           if (data.teacher && data.teacher.id) {
             Cookies.set('teacher_pk', data.teacher.id, { expires: 7 });
             localStorage.setItem('teacher_pk', data.teacher.id);
-            console.log('Set teacher_pk cookie and localStorage:', Cookies.get('teacher_pk'), localStorage.getItem('teacher_pk'));
           }
           // Set session for teacher
           sessionManager.setLoggedIn('teacher', data.teacher);
@@ -142,8 +140,10 @@ const Login = () => {
           // Dispatch custom event to notify Header of auth change
           window.dispatchEvent(new Event('authChange'));
           
-          navigate('/student-dashboard');
-          window.location.reload();
+          // Use setTimeout to ensure all data is set before navigation
+          setTimeout(() => {
+            navigate('/student-dashboard');
+          }, 100);
         }
       } else if (data && data.error) {
         setServerError(data.error);

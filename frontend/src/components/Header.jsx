@@ -24,18 +24,14 @@ const Header = () => {
     const verifyUserStatus = async () => {
       // Prevent multiple simultaneous verification calls
       if (isVerifyingRef.current) {
-        console.log('Header: Verification already in progress, skipping...');
         return;
       }
       
       isVerifyingRef.current = true;
       
       try {
-        console.log('Header: Starting authentication verification...');
-        
         // Check if session is valid
         if (!sessionManager.isLoggedIn()) {
-          console.log('Header: Session manager says not logged in');
           setIsLoggedIn(false);
           setUserInfo({
             greeting: '',
@@ -47,11 +43,8 @@ const Header = () => {
           return;
         }
 
-        console.log('Header: Session manager says logged in, checking session expiry...');
-        
         // Check if session has expired
         if (sessionManager.isSessionExpired()) {
-          console.log('Header: Session expired, clearing...');
           sessionManager.clearSession();
           setIsLoggedIn(false);
           setUserInfo({
@@ -66,10 +59,8 @@ const Header = () => {
 
         // Get authentication data from session manager
         const authData = sessionManager.getAuthData();
-        console.log('Header: Got auth data:', authData);
         
         if (!authData) {
-          console.log('Header: No auth data, clearing session...');
           sessionManager.clearSession();
           setIsLoggedIn(false);
           setUserInfo({
@@ -83,7 +74,6 @@ const Header = () => {
         }
 
         const { email, user_type: currentRole } = authData;
-        console.log('Header: Making server verification for:', email, currentRole);
 
         // Make server-side verification call
         const response = await fetch('/api/verify-auth/', {
@@ -99,11 +89,8 @@ const Header = () => {
           })
         });
 
-        console.log('Header: Server response status:', response.status);
-        
         if (response.ok) {
           const serverData = await response.json();
-          console.log('Header: Server verification successful:', serverData);
           
           // User is still logged in
           let greeting = '';
@@ -119,7 +106,6 @@ const Header = () => {
             userRole = 'Student';
           } else if (currentRole === 'teacher') {
             const teacherName = Cookies.get('teacher_name');
-            console.log('Header: Teacher name from cookie:', teacherName);
             greeting = `Welcome, ${teacherName}!`;
             dashboardLink = '/teacher-dashboard';
             profileLink = '/profile';
@@ -132,8 +118,6 @@ const Header = () => {
             userRole = 'Organization';
           }
 
-          console.log('Header: Setting user info:', { greeting, dashboardLink, profileLink, userRole });
-
           // Refresh session timestamp
           sessionManager.refreshSession();
           setIsLoggedIn(true);
@@ -144,7 +128,6 @@ const Header = () => {
             userRole
           });
         } else {
-          console.log('Header: Server verification failed, clearing all data');
           // User is not logged in, clear all data
           sessionManager.clearSession();
           localStorage.removeItem('student_name');
@@ -168,7 +151,6 @@ const Header = () => {
           });
         }
       } catch (error) {
-        console.error('Header: Authentication verification failed:', error);
         // On error, clear session and data
         sessionManager.clearSession();
         localStorage.removeItem('student_name');
@@ -203,14 +185,12 @@ const Header = () => {
     const handleStorageChange = (e) => {
       // Re-verify when relevant storage items change (for login events)
       if (e.key === 'student_name' || e.key === 'student_email' || e.key === 'teacher_name' || e.key === 'teacher_pk') {
-        console.log('Header: Storage changed, re-verifying auth...');
         setTimeout(verifyUserStatus, 100); // Small delay to ensure all data is set
       }
     };
 
     // Listen for custom events (for cookie changes)
     const handleAuthChange = () => {
-      console.log('Header: Auth change event detected, re-verifying...');
       setTimeout(verifyUserStatus, 100);
     };
 
@@ -266,7 +246,6 @@ const Header = () => {
         });
       }
     } catch (error) {
-      console.error('Logout API call failed:', error);
       // Continue with client-side logout even if server call fails
     }
     

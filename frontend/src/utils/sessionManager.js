@@ -40,13 +40,7 @@ class SessionManager {
     const teacherName = this.getCookie('teacher_name');
     const orgName = this.getCookie('org_name');
     
-    // Only log if we're debugging
-    if (window.location.search.includes('debug=true')) {
-      console.log('SessionManager: Checking auth data...');
-      console.log('- Student name:', studentName);
-      console.log('- Teacher name:', teacherName);
-      console.log('- Org name:', orgName);
-    }
+
     
     const hasAuth = !!(studentName || teacherName || orgName);
     return hasAuth;
@@ -54,8 +48,6 @@ class SessionManager {
 
   // Set user as logged in for this session only
   setLoggedIn(userType, userData) {
-    console.log('SessionManager: Setting logged in for:', userType, userData?.name || userData?.email);
-    
     const sessionId = this.getSessionId();
     if (!sessionId) {
       this.initializeSession();

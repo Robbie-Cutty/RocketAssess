@@ -20,6 +20,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
+    '192.168.1.71',  # Add your local IP
     # Add your production domain here
     env('ALLOWED_HOST', default=''),
     # Railway domains
