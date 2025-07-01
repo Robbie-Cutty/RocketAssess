@@ -244,7 +244,17 @@ const StudentDashboard = () => {
                       {isLive && invite.test_id && (
                         <button
                           className="student-dashboard-action live"
-                          onClick={() => navigate(`/test/${invite.test_id}`)}
+                          onClick={async () => {
+                            try {
+                              await api.post('/api/start-test/', {
+                                test_id: invite.test_id,
+                                student_email: email
+                              });
+                              navigate(`/test/${invite.test_id}`);
+                            } catch (err) {
+                              alert('Failed to start test. Please try again.');
+                            }
+                          }}
                         >
                           Start Test
                         </button>
@@ -290,7 +300,9 @@ const StudentDashboard = () => {
                     <div className="student-dashboard-card-meta">
                       <b>Subject:</b> {test.test_subject}<br />
                       <b>Score:</b> {test.score.toFixed(1)}%<br />
-                      <b>Completed:</b> {new Date(test.submitted_at).toLocaleString()}
+                      <b>Entered:</b> {test.entered_at ? new Date(test.entered_at).toLocaleString() : '-'}<br />
+                      <b>Completed:</b> {test.submitted_at ? new Date(test.submitted_at).toLocaleString() : '-'}<br />
+                      <b>Duration:</b> {typeof test.duration === 'number' ? Math.round(test.duration / 60) + ' min' : '-'}
                     </div>
                     <button
                       className="student-dashboard-action"

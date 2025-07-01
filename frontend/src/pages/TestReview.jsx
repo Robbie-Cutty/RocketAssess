@@ -124,6 +124,26 @@ const TestReview = () => {
     );
   };
 
+  // Helper to format duration as min:sec
+  const formatDuration = (seconds) => {
+    if (typeof seconds !== 'number' || isNaN(seconds)) return '-';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m} min ${s.toString().padStart(2, '0')} sec`;
+  };
+
+  // Helper to estimate entered_at if missing
+  const getEnteredAt = (submission) => {
+    if (submission.entered_at) return { value: new Date(submission.entered_at), estimated: false };
+    if (submission.submitted_at && typeof submission.duration === 'number') {
+      const entered = new Date(new Date(submission.submitted_at).getTime() - submission.duration * 1000);
+      return { value: entered, estimated: true };
+    }
+    return { value: null, estimated: false };
+  };
+
+  const enteredAtInfo = getEnteredAt(submission);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-light">
       <div className="card max-w-2xl w-full" style={{ margin: '40px auto', padding: 32 }}>
@@ -134,8 +154,22 @@ const TestReview = () => {
           </div>
         )}
         <div className="mb-2 text-secondary">{submission.test.subject} &middot; {submission.test.description}</div>
-        <div style={{ fontWeight: 600, fontSize: 18, margin: '24px 0 12px 0' }}>
-          Score: {submission.score.toFixed(1)}% &middot; Completed: {new Date(submission.submitted_at).toLocaleString()}
+        <div style={{
+          background: '#f8fafc',
+          borderRadius: 10,
+          padding: 24,
+          margin: '0 0 24px 0',
+          textAlign: 'center',
+          fontWeight: 700,
+          fontSize: 22
+        }}>
+          Time in Test<br />
+          <span style={{ fontWeight: 600, fontSize: 20 }}>
+            Entered: {enteredAtInfo.value ? enteredAtInfo.value.toLocaleString() : '-'}
+            {enteredAtInfo.estimated && <span style={{ color: '#f59e42', fontWeight: 400 }}> (estimated)</span>}<br />
+            End: {submission.submitted_at ? new Date(submission.submitted_at).toLocaleString() : '-'}<br />
+            Duration: {formatDuration(submission.duration)}
+          </span>
         </div>
         {scheduledStart && (
           <div style={{ marginBottom: 18, background: '#f3f4f6', borderRadius: 8, padding: 16 }}>

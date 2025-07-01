@@ -15,6 +15,7 @@ const TestRoom = () => {
   const [timer, setTimer] = useState(null); // seconds left
   const [startTime, setStartTime] = useState(null); // Date.now() at start
   const [submitting, setSubmitting] = useState(false);
+  const [submissionId, setSubmissionId] = useState(null);
   const timerRef = useRef();
 
   useEffect(() => {
@@ -26,12 +27,6 @@ const TestRoom = () => {
         if (res.status === 200) {
           const data = res.data;
           setTest(data);
-          // Set timer from duration_minutes (convert to seconds)
-          if (data.duration_minutes) {
-            setTimer(data.duration_minutes * 60);
-          } else {
-            setTimer(null);
-          }
         } else {
           setError('Failed to fetch test details.');
         }
@@ -54,8 +49,30 @@ const TestRoom = () => {
         setLoading(false);
       }
     };
-    fetchTest().then(fetchQuestions);
-    setStartTime(Date.now());
+    const fetchSubmission = async () => {
+      const studentEmail = localStorage.getItem('student_email');
+      if (!studentEmail) return;
+      try {
+        // Find the submission for this test and student
+        const res = await api.get(`/api/student-completed-tests/?email=${studentEmail}`);
+        if (res.status === 200 && Array.isArray(res.data)) {
+          const sub = res.data.find(s => s.test_id === parseInt(testId));
+          if (sub) {
+            setSubmissionId(sub.submission_id);
+            if (sub.entered_at) {
+              const enteredAt = new Date(sub.entered_at).getTime();
+              setStartTime(enteredAt);
+              if (test && test.duration_minutes) {
+                const elapsed = Math.floor((Date.now() - enteredAt) / 1000);
+                const remaining = test.duration_minutes * 60 - elapsed;
+                setTimer(remaining > 0 ? remaining : 0);
+              }
+            }
+          }
+        }
+      } catch {}
+    };
+    fetchTest().then(fetchQuestions).then(fetchSubmission);
   }, [testId]);
 
   // Countdown timer effect (robust, uses wall clock)
@@ -71,17 +88,15 @@ const TestRoom = () => {
 
   // Wall clock sync for timer (handles tab inactivity)
   useEffect(() => {
-    if (startTime && timer !== null && !submitted) {
+    if (startTime && test && test.duration_minutes && !submitted) {
       const interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        if (test && test.duration_minutes) {
-          const left = test.duration_minutes * 60 - elapsed;
-          setTimer(left > 0 ? left : 0);
-        }
+        const left = test.duration_minutes * 60 - elapsed;
+        setTimer(left > 0 ? left : 0);
       }, 3000);
       return () => clearInterval(interval);
     }
-  }, [startTime, test, timer, submitted]);
+  }, [startTime, test, submitted]);
 
   useEffect(() => {
     if (submitted) {
@@ -112,7 +127,8 @@ const TestRoom = () => {
         test_id: parseInt(testId),
         student_email: studentEmail,
         answers: answers,
-        duration: duration
+        duration: duration,
+        submission_id: submissionId
       };
       const response = await api.post('/api/submit-test/', submissionData);
       if (response.status === 200) {

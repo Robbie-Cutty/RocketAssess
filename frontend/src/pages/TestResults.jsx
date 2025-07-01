@@ -35,6 +35,24 @@ const TestResults = () => {
     fetchTestResults();
   }, [testId]);
 
+  // Helper to format duration as min:sec
+  const formatDuration = (seconds) => {
+    if (typeof seconds !== 'number' || isNaN(seconds)) return '-';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m} min ${s.toString().padStart(2, '0')} sec`;
+  };
+
+  // Helper to estimate entered_at if missing
+  const getEnteredAt = (s) => {
+    if (s.entered_at) return { value: new Date(s.entered_at), estimated: false };
+    if (s.submitted_at && typeof s.duration === 'number') {
+      const entered = new Date(new Date(s.submitted_at).getTime() - s.duration * 1000);
+      return { value: entered, estimated: true };
+    }
+    return { value: null, estimated: false };
+  };
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
   if (error) return <div style={{ padding: 40, color: '#dc2626', textAlign: 'center' }}>{error}</div>;
 
@@ -69,9 +87,17 @@ const TestResults = () => {
                   <td style={{ padding: 8 }}>{s.student_name || s.student_email}</td>
                   <td style={{ padding: 8, textAlign: 'center' }}>{s.score.toFixed(1)}%</td>
                   <td style={{ padding: 8, textAlign: 'center', whiteSpace: 'pre-line', fontSize: 14 }}>
-                    <div><b>Entered:</b> {s.entered_at ? new Date(s.entered_at).toLocaleString() : '-'}</div>
-                    <div><b>End:</b> {s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '-'}</div>
-                    <div><b>Duration:</b> {s.duration ? Math.round(s.duration / 60) + ' min' : '-'}</div>
+                    {(() => {
+                      const enteredAtInfo = getEnteredAt(s);
+                      return (
+                        <div>
+                          <b>Entered:</b> {enteredAtInfo.value ? enteredAtInfo.value.toLocaleString() : '-'}
+                          {enteredAtInfo.estimated && <span style={{ color: '#f59e42', fontWeight: 400 }}> (estimated)</span>}<br />
+                          <b>End:</b> {s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '-'}<br />
+                          <b>Duration:</b> {formatDuration(s.duration)}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td style={{ padding: 8, textAlign: 'center' }}>
                     <button

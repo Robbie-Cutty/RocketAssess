@@ -29,6 +29,7 @@ from .db_utils import (
 )
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -883,6 +884,7 @@ def submit_test(request):
         student_email = data.get('student_email')
         answers = data.get('answers', {})  # {question_id: selected_answer}
         duration = data.get('duration', 0)  # in seconds
+        submission_id = data.get('submission_id')  # from start-test endpoint
         
         if not test_id or not student_email:
             return Response({'error': 'test_id and student_email are required'}, status=400)
@@ -894,9 +896,42 @@ def submit_test(request):
         except (Test.DoesNotExist, Student.DoesNotExist):
             return Response({'error': 'Test or student not found'}, status=400)
         
-        # Check if student already submitted this test
-        if Submission.objects.filter(test=test, student=student).exists():
-            return Response({'error': 'Test already submitted'}, status=400)
+        # Try to find existing submission from start-test
+        submission = None
+        if submission_id:
+            try:
+                submission = Submission.objects.get(
+                    id=submission_id,
+                    test=test,
+                    student=student
+                )
+                # Update submission with submitted_at and duration
+                submission.submitted_at = timezone.now()
+                submission.duration = duration
+                submission.save()
+            except Submission.DoesNotExist:
+                # Fallback: create new submission if not found
+                submission = None
+        
+        # If no existing submission found, create new one
+        if not submission:
+            # Check if student already submitted this test
+            if Submission.objects.filter(test=test, student=student).exists():
+                return Response({'error': 'Test already submitted'}, status=400)
+            
+            # Create new submission
+            submission = Submission.objects.create(
+                test=test,
+                student=student,
+                duration=duration,
+                score=0,  # Will be updated after calculation
+                submitted_at=timezone.now()
+            )
+        else:
+            # Ensure submitted_at is set for all cases
+            if not submission.submitted_at:
+                submission.submitted_at = timezone.now()
+                submission.save()
         
         # Get all questions for this test
         questions = Question.objects.filter(test=test)
@@ -905,13 +940,8 @@ def submit_test(request):
         total_points = 0
         earned_points = 0
         
-        # Create submission
-        submission = Submission.objects.create(
-            test=test,
-            student=student,
-            duration=duration,
-            score=0  # Will be updated after calculation
-        )
+        # Clear existing answers if resubmitting
+        SubmissionAnswer.objects.filter(submission=submission).delete()
         
         # Process each answer
         for question in questions:
@@ -939,7 +969,10 @@ def submit_test(request):
             'submission_id': submission.id,
             'score': float(final_score),
             'total_points': total_points,
-            'earned_points': earned_points
+            'earned_points': earned_points,
+            'entered_at': submission.entered_at,
+            'submitted_at': submission.submitted_at,
+            'duration': submission.duration
         })
         
     except Exception as e:
@@ -967,6 +1000,7 @@ def student_completed_tests(request):
                 'test_subject': submission.test.subject,
                 'submission_id': submission.id,
                 'score': float(submission.score) if submission.score else 0,
+                'entered_at': submission.entered_at,
                 'submitted_at': submission.submitted_at,
                 'duration': submission.duration
             })
@@ -1019,6 +1053,7 @@ def submission_detail(request, submission_id):
                 'email': submission.student.email,
             },
             'score': float(submission.score) if submission.score else 0,
+            'entered_at': submission.entered_at,
             'submitted_at': submission.submitted_at,
             'duration': submission.duration,
             'questions': questions
@@ -1314,3 +1349,38 @@ class VerifyAuthView(APIView):
         response['Expires'] = '0'
         
         return response 
+
+@csrf_exempt
+@api_view(['POST'])
+@login_required
+def start_test(request):
+    """
+    Create a Submission with entered_at when a student starts a test.
+    If a submission already exists for this student and test, return it (do not create a new one).
+    """
+    try:
+        data = request.data
+        test_id = data.get('test_id')
+        student_email = data.get('student_email')
+        if not test_id or not student_email:
+            return Response({'error': 'test_id and student_email are required'}, status=400)
+        from .models import Test, Student, Submission
+        test = Test.objects.get(id=test_id)
+        student = Student.objects.get(email=student_email)
+        # Check for any existing submission for this test and student
+        submission = Submission.objects.filter(test=test, student=student).order_by('entered_at').first()
+        if submission:
+            return Response({'submission_id': submission.id, 'entered_at': submission.entered_at}, status=200)
+        # Create new submission
+        submission = Submission.objects.create(
+            test=test,
+            student=student,
+            entered_at=timezone.now()
+        )
+        return Response({'submission_id': submission.id, 'entered_at': submission.entered_at}, status=201)
+    except Test.DoesNotExist:
+        return Response({'error': 'Test not found'}, status=404)
+    except Student.DoesNotExist:
+        return Response({'error': 'Student not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500) 
