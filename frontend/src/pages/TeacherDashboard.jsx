@@ -6,9 +6,29 @@ import { FaUsers } from 'react-icons/fa';
 import TestInviteModal from '../components/TestInviteModal';
 import AnalyticsCard from '../components/AnalyticsCard';
 import api from '../utils/axios';
+import sessionManager from '../utils/sessionManager';
 import './TeacherDashboard.css';
+import QuestionPool from './QuestionPool';
 
 const TeacherDashboard = () => {
+  const navigate = useNavigate();
+  
+  // Check user role on component mount
+  useEffect(() => {
+    const userType = sessionManager.getUserType();
+    if (userType !== 'teacher') {
+      alert(`Access denied. You are logged in as a ${userType}. Redirecting to appropriate dashboard.`);
+      if (userType === 'student') {
+        navigate('/student-dashboard');
+      } else if (userType === 'organization') {
+        navigate('/org-profile');
+      } else {
+        navigate('/login');
+      }
+      return;
+    }
+  }, [navigate]);
+
   // Move authentication state into the component
   const [teacherPk, setTeacherPk] = useState(null);
   const [teacherName, setTeacherName] = useState('');
@@ -149,8 +169,6 @@ const TeacherDashboard = () => {
       setAddLoading(false);
     }
   };
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (teacherPk) fetchTests();
@@ -894,89 +912,27 @@ const TeacherDashboard = () => {
                 ) : filteredPool.length === 0 ? (
                   <p style={{ color: '#888' }}>No questions in the pool for this subject.</p>
                 ) : (
-                  <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-                    {poolPageQuestions.map(q => (
-                      <li key={q.id} style={{
-                        background: '#fff',
-                        borderRadius: 16,
-                        boxShadow: '0 2px 8px #0001',
-                        border: '1px solid #e5e7eb',
-                        marginBottom: 16,
-                        padding: 28,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: 18,
-                        minWidth: 420,
-                        maxWidth: 700,
-                        width: '100%',
-                        wordBreak: 'break-word',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedPoolIds.includes(q.id)}
-                            onChange={() => togglePoolSelect(q.id)}
-                          />
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: 20 }}>{q.text}</div>
-                            <div style={{ fontSize: 16, color: '#555', marginTop: 8 }}>
-                              A: {q.option_a} | B: {q.option_b} | C: {q.option_c} | D: {q.option_d}
-                            </div>
-                            <div style={{ fontSize: 15, color: '#22c55e', marginTop: 4 }}>Correct: {q.correct_answer} | Points: {q.point_value}</div>
-                          </div>
-                        </div>
-                        <button
-                          className="btn btn-xs btn-outline"
-                          onClick={async () => {
-                            setAddLoading(true);
-                            setAddError('');
-                            try {
-                              const res = await api.post('/api/question-create/', { ...q, test: selectedTest.id, subject: selectedTest.subject });
-                              if (res.status === 201) {
-                                const newQ = res.data;
-                                setQuestions([...questions, newQ]);
-                              } else {
-                                setAddError('Failed to add question from pool.');
-                              }
-                            } catch {
-                              setAddError('Network error.');
-                            } finally {
-                              setAddLoading(false);
-                            }
-                          }}
-                        >
-                          Add to Test
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {poolTotalPages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                    {getPageNumbers(poolPage, poolTotalPages).map((page, idx) => (
-                      page === '...'
-                        ? <span key={page + idx} style={{ fontSize: 22, color: '#888', minWidth: 28 }}>...</span>
-                        : <button
-                            key={page}
-                            onClick={() => setPoolPage(page)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: page === poolPage ? '#111' : '#2563eb',
-                              fontWeight: page === poolPage ? 700 : 400,
-                              fontSize: 22,
-                              cursor: page === poolPage ? 'default' : 'pointer',
-                              outline: 'none',
-                              padding: 0,
-                              minWidth: 28
-                            }}
-                            disabled={page === poolPage}
-                          >
-                            {page}
-                          </button>
-                    ))}
-                  </div>
+                  <QuestionPool
+                    testId={selectedTest.id}
+                    onAdd={async (q) => {
+                      setAddLoading(true);
+                      setAddError('');
+                      try {
+                        const res = await api.post('/api/question-create/', { ...q, test: selectedTest.id, subject: selectedTest.subject });
+                        if (res.status === 201) {
+                          const newQ = res.data;
+                          setQuestions([...questions, newQ]);
+                        } else {
+                          setAddError('Failed to add question from pool.');
+                        }
+                      } catch {
+                        setAddError('Network error.');
+                      } finally {
+                        setAddLoading(false);
+                      }
+                    }}
+                    addedQuestionIds={questions.map(q => q.id)}
+                  />
                 )}
               </div>
               <div style={{ flex: '2 1 700px', minWidth: 400, maxWidth: 900 }}>

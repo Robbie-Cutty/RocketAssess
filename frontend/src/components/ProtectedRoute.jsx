@@ -111,6 +111,53 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
+  // Role-based routing logic
+  if (userRole && !requiredRole) {
+    const currentPath = location.pathname;
+    
+    // If user is a student and trying to access teacher routes, redirect to student dashboard
+    if (userRole === 'student' && (
+      currentPath.startsWith('/teacher-dashboard') ||
+      currentPath.startsWith('/create-test') ||
+      currentPath.startsWith('/question-pool') ||
+      currentPath.startsWith('/invite-students') ||
+      currentPath.startsWith('/invited-students')
+    )) {
+      // Show a brief message before redirecting
+      setTimeout(() => {
+        alert('Access denied. You are logged in as a student. Redirecting to Student Dashboard.');
+      }, 100);
+      return <Navigate to="/student-dashboard" replace />;
+    }
+    
+    // If user is a teacher and trying to access student routes, redirect to teacher dashboard
+    if (userRole === 'teacher' && (
+      currentPath.startsWith('/student-dashboard')
+    )) {
+      // Show a brief message before redirecting
+      setTimeout(() => {
+        alert('Access denied. You are logged in as a teacher. Redirecting to Teacher Dashboard.');
+      }, 100);
+      return <Navigate to="/teacher-dashboard" replace />;
+    }
+    
+    // If user is an organization and trying to access teacher/student routes, redirect to org profile
+    if (userRole === 'organization' && (
+      currentPath.startsWith('/teacher-dashboard') ||
+      currentPath.startsWith('/student-dashboard') ||
+      currentPath.startsWith('/create-test') ||
+      currentPath.startsWith('/question-pool') ||
+      currentPath.startsWith('/invite-students') ||
+      currentPath.startsWith('/invited-students')
+    )) {
+      // Show a brief message before redirecting
+      setTimeout(() => {
+        alert('Access denied. You are logged in as an organization. Redirecting to Organization Profile.');
+      }, 100);
+      return <Navigate to="/org-profile" replace />;
+    }
+  }
+
   return children;
 };
 

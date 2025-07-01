@@ -47,25 +47,25 @@ function App() {
               } />
               
               <Route path="/teacher-dashboard" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="teacher">
                   <TeacherDashboard />
                 </ProtectedRoute>
               } />
               
               <Route path="/student-dashboard" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="student">
                   <StudentDashboard />
                 </ProtectedRoute>
               } />
               
               <Route path="/create-test" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="teacher">
                   <CreateTest />
                 </ProtectedRoute>
               } />
               
               <Route path="/question-pool" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="teacher">
                   <QuestionPool />
                 </ProtectedRoute>
               } />
@@ -95,19 +95,19 @@ function App() {
               } />
               
               <Route path="/invite-students/:testId" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="teacher">
                   <InviteStudentsPage />
                 </ProtectedRoute>
               } />
               
               <Route path="/invited-students/:testId" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="teacher">
                   <InvitedStudentsList />
                 </ProtectedRoute>
               } />
               
               <Route path="/org-profile" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="organization">
                   <OrgProfile />
                 </ProtectedRoute>
               } />

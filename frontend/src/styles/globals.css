@@ -40,8 +40,13 @@ img {
 .gap-2 { gap: 0.5rem; }
 .gap-3 { gap: 0.75rem; }
 .gap-4 { gap: 1rem; }
-.grid { display: grid; }
-.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid {
+  display: grid;
+  gap: 1.25rem;
+}
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
 
@@ -108,10 +113,10 @@ img {
    4. CARD, BUTTON, BADGE, ALERT, FORM
    ========================= */
 .card {
+  border-radius: 0.75rem;
   background: #fff;
-  border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  padding: 2rem;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
 .card-header {
@@ -139,18 +144,32 @@ img {
 .btn-primary {
   background: #2563eb;
   color: #fff;
+  border: none;
+  transition: background 0.18s, color 0.18s;
 }
-.btn-primary:hover {
+.btn-primary:disabled, .btn-disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+.btn-primary:hover:not(:disabled):not(.btn-disabled) {
   background: #1d4ed8;
+  color: #fff;
 }
 .btn-outline {
-  background: #fff;
+  border: 1px solid #2563eb;
   color: #2563eb;
-  border: 1.5px solid #2563eb;
+  background: #fff;
+  transition: background 0.18s, color 0.18s, border 0.18s;
 }
-.btn-outline:hover {
+.btn-outline:disabled {
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+.btn-outline:hover:not(:disabled) {
   background: #2563eb;
   color: #fff;
+  border-color: #2563eb;
 }
 .btn-lg {
   font-size: 1.125rem;
@@ -321,5 +340,150 @@ img {
 @media (max-width: 900px) {
   .dashboard-btn-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* QuestionPool grid and card improvements */
+@media (min-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.bg-green-100 {
+  background: #dcfce7;
+}
+.text-green-700 {
+  color: #15803d;
+}
+.bg-blue-100 {
+  background: #dbeafe;
+}
+.text-blue-700 {
+  color: #1d4ed8;
+}
+.ring-2 {
+  box-shadow: 0 0 0 2px #2563eb;
+}
+.sticky {
+  position: sticky;
+}
+.top-0 {
+  top: 0;
+}
+@media (max-width: 767px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Question Pool custom grid and card styles */
+.question-pool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.qp-card {
+  position: relative;
+  background: #fff;
+  border-radius: 1.1rem;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+  border: 1.5px solid #e5e7eb;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: box-shadow 0.18s, border 0.18s;
+}
+.qp-card-selected {
+  border: 2px solid #2563eb;
+  box-shadow: 0 0 0 2px #2563eb33;
+}
+.qp-checkbox {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: #2563eb;
+  z-index: 2;
+}
+.qp-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.qp-question-text {
+  font-size: 1.08rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  color: #1e293b;
+}
+.qp-choices-area {
+  background: #f3f4f6;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1.2rem;
+  font-size: 0.97rem;
+  color: #475569;
+}
+.qp-choice {
+  min-width: 90px;
+}
+.qp-choice-label {
+  font-weight: 700;
+  color: #2563eb;
+}
+.qp-badges-row {
+  display: flex;
+  gap: 0.7rem;
+  margin-top: 0.2rem;
+}
+.qp-badge {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.18rem 0.7rem;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.qp-badge-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+.qp-badge-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.qp-add-btn {
+  margin-top: 1.2rem;
+  width: 100%;
+  border-radius: 0.7rem;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+@media (max-width: 600px) {
+  .question-pool-grid {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+    max-width: 100%;
+  }
+  .qp-card {
+    padding: 1.1rem 0.7rem 0.7rem 0.7rem;
+    min-height: 170px;
+  }
+  .qp-add-btn {
+    font-size: 0.97rem;
+    padding: 0.5rem 0.7rem;
   }
 } 

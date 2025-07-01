@@ -3,6 +3,7 @@ import { FaBell, FaClipboardList, FaCheckCircle, FaSyncAlt } from 'react-icons/f
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/axios';
+import sessionManager from '../utils/sessionManager';
 
 const PAGE_SIZE = 3;
 
@@ -13,6 +14,24 @@ const TABS = [
 ];
 
 const StudentDashboard = () => {
+  const navigate = useNavigate();
+  
+  // Check user role on component mount
+  useEffect(() => {
+    const userType = sessionManager.getUserType();
+    if (userType !== 'student') {
+      alert(`Access denied. You are logged in as a ${userType}. Redirecting to appropriate dashboard.`);
+      if (userType === 'teacher') {
+        navigate('/teacher-dashboard');
+      } else if (userType === 'organization') {
+        navigate('/org-profile');
+      } else {
+        navigate('/login');
+      }
+      return;
+    }
+  }, [navigate]);
+
   const name = localStorage.getItem('student_name') || 'Student';
   const email = localStorage.getItem('student_email') || '';
   const [invites, setInvites] = useState([]);
@@ -26,7 +45,6 @@ const StudentDashboard = () => {
   const [completedPage, setCompletedPage] = useState(1);
   const [testFilter, setTestFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('invites');
-  const navigate = useNavigate();
   const now = new Date();
 
   const fetchInvites = () => {

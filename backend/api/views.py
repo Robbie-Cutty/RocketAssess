@@ -103,29 +103,42 @@ def check_authentication(request):
         if hasattr(request, 'query_params') and hasattr(request, 'data'):
             email = request.data.get('email') or request.query_params.get('email')
             user_type = request.data.get('user_type') or request.query_params.get('user_type')
-        # Django WSGIRequest
+        # Regular Django Request
         else:
             email = request.POST.get('email') or request.GET.get('email')
             user_type = request.POST.get('user_type') or request.GET.get('user_type')
     
     if not email or not user_type:
-        raise PermissionDenied('Authentication required')
+        raise PermissionDenied("Authentication required")
     
-    user = None
-    if user_type == 'organization':
-        user = Organization.objects.filter(email=email).first()
+    # Check if user exists and is logged in
+    if user_type == 'student':
+        try:
+            student = Student.objects.get(email=email)
+            if not student.is_logged_in:
+                raise PermissionDenied("User not logged in")
+        except Student.DoesNotExist:
+            raise PermissionDenied("Student not found")
     elif user_type == 'teacher':
-        user = Teacher.objects.filter(email=email).first()
-    elif user_type == 'student':
-        user = Student.objects.filter(email=email).first()
-    
-    if not user or not getattr(user, 'is_logged_in', False):
-        raise PermissionDenied('Authentication required')
-    
-    return None
+        try:
+            teacher = Teacher.objects.get(email=email)
+            if not teacher.is_logged_in:
+                raise PermissionDenied("User not logged in")
+        except Teacher.DoesNotExist:
+            raise PermissionDenied("Teacher not found")
+    elif user_type == 'organization':
+        try:
+            org = Organization.objects.get(org_code=email)
+            if not org.is_logged_in:
+                raise PermissionDenied("User not logged in")
+        except Organization.DoesNotExist:
+            raise PermissionDenied("Organization not found")
+    else:
+        raise PermissionDenied("Invalid user type")
 
 class OrganizationRegisterView(APIView):
     def post(self, request):
+        # This endpoint is public (for registration), so no role check needed
         serializer = OrganizationSerializer(data=request.data)
         if serializer.is_valid():
             try:
@@ -167,6 +180,7 @@ class OrganizationRegisterView(APIView):
 
 class OrganizationLoginView(APIView):
     def post(self, request):
+        # This endpoint is public (for login), so no role check needed
         org_code = request.data.get('org_code')
         email = request.data.get('email')
         user, error_response = authenticate_user('organization', email, org_code=org_code)
@@ -182,6 +196,13 @@ class TeacherInviteView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def post(self, request):
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         emails = request.data.get('emails', [])
         if not isinstance(emails, list) or not emails:
             return Response({'error': 'A list of emails is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -192,7 +213,7 @@ class TeacherInviteView(APIView):
                 continue
             try:
                 # Simulate invite link (in real app, generate a secure tokenized link)
-                invite_link = 'http://localhost:5173/teacher-register?email=' + email
+                invite_link = 'http://192.168.1.71:5173/teacher-register?email=' + email
                 success = send_teacher_invite_email(email, invite_link)
                 if success:
                     results.append({'email': email, 'status': 'sent'})
@@ -208,6 +229,13 @@ class TeacherListView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def get(self, request):
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         org_code = request.query_params.get('org_code')
         if not org_code:
             return Response({'error': 'Organization code is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -220,6 +248,7 @@ class TeacherListView(APIView):
 
 class TeacherRegisterView(APIView):
     def post(self, request):
+        # This endpoint is public (for registration), so no role check needed
         serializer = TeacherSerializer(data=request.data)
         if serializer.is_valid():
             try:
@@ -260,6 +289,7 @@ class TeacherRegisterView(APIView):
 
 class TeacherLoginView(APIView):
     def post(self, request):
+        # This endpoint is public (for login), so no role check needed
         email = request.data.get('email')
         password = request.data.get('password')
         user, error_response = authenticate_user('teacher', email, password=password)
@@ -275,6 +305,13 @@ class TestCreateView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def post(self, request):
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         serializer = TestSerializer(data=request.data)
         if serializer.is_valid():
             test = serializer.save()
@@ -287,6 +324,15 @@ class TestListView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def get(self, request):
+        # Check if user is a teacher
+        email = request.META.get('HTTP_X_USER_EMAIL')
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         teacher_id = request.query_params.get('teacher_id')
         if not teacher_id:
             return Response({'error': 'Teacher ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -303,6 +349,13 @@ class QuestionCreateView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def post(self, request):
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         serializer = QuestionSerializer(data=request.data)
         if serializer.is_valid():
             # Check for duplicate questions using shared utility
@@ -324,9 +377,25 @@ class QuestionListView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def get(self, request):
+        # Allow both teachers and students to access questions
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type not in ['teacher', 'student']:
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher or student privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         test_id = request.query_params.get('test_id')
         if not test_id:
             return Response({'error': 'Test ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # For students, verify they have access to this test
+        if user_type == 'student':
+            student_email = request.META.get('HTTP_X_USER_EMAIL')
+            if not student_email:
+                return Response({'error': 'Student email required.'}, status=status.HTTP_400_BAD_REQUEST)
+            from .models import TestInvite
+            if not TestInvite.objects.filter(test_id=test_id, student_email=student_email).exists():
+                return Response({'error': 'Access denied. You are not invited to this test.'}, status=status.HTTP_403_FORBIDDEN)
         
         questions = get_cached_test_questions(test_id)
         return Response(questions, status=status.HTTP_200_OK)
@@ -334,10 +403,38 @@ class QuestionListView(APIView):
 class QuestionUpdateView(UpdateAPIView):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
+    
+    def dispatch(self, request, *args, **kwargs):
+        check_authentication(request)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def patch(self, request, *args, **kwargs):
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        return super().patch(request, *args, **kwargs)
 
 class QuestionDeleteView(DestroyAPIView):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
+    
+    def dispatch(self, request, *args, **kwargs):
+        check_authentication(request)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def delete(self, request, *args, **kwargs):
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        return super().delete(request, *args, **kwargs)
 
 class QuestionPoolView(APIView):
     def dispatch(self, request, *args, **kwargs):
@@ -345,13 +442,20 @@ class QuestionPoolView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def get(self, request):
-        teacher_id = request.query_params.get('teacher_id')
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 10))
-        subject = request.query_params.get('subject')
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
         
+        teacher_id = request.query_params.get('teacher_id')
+        subject = request.query_params.get('subject', '')
         if not teacher_id:
             return Response({'error': 'Teacher ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 10))
         
         data = get_cached_question_pool(teacher_id, subject, page, page_size)
         if data is None:
@@ -390,6 +494,7 @@ def teacher_org_info(request):
 
 class StudentRegisterView(APIView):
     def post(self, request):
+        # This endpoint is public (for registration), so no role check needed
         # Get all fields from the request
         student_id = request.data.get('student_id')
         name = request.data.get('name')
@@ -442,10 +547,17 @@ class StudentInviteView(APIView):
         return super().dispatch(request, *args, **kwargs)
     
     def post(self, request):
+        # Check if user is a teacher
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        if user_type != 'teacher':
+            return Response({
+                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         emails = request.data.get('emails', [])
         teacher_id = request.data.get('teacher_id')
-        if not isinstance(emails, list) or not emails or not teacher_id:
-            return Response({'error': 'Emails and teacher_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(emails, list) or not emails:
+            return Response({'error': 'A list of emails is required.'}, status=status.HTTP_400_BAD_REQUEST)
         results = []
         for email in emails:
             if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
@@ -463,7 +575,7 @@ class StudentInviteView(APIView):
                 # Fetch org_code for the teacher
                 teacher = Teacher.objects.get(id=teacher_id)
                 org_code = teacher.org.org_code if teacher and teacher.org else ''
-                invite_link = f'http://localhost:5173/student-register?email={email}&org_code={org_code}'
+                invite_link = f'http://192.168.1.71:5173/student-register?email={email}&org_code={org_code}'
                 subject = 'You are invited to join Rocket Assess as a Student'
                 html_message = f"""
                 <html><body>
@@ -503,6 +615,7 @@ def organization_lookup(request):
 
 class StudentLoginView(APIView):
     def post(self, request):
+        # This endpoint is public (for login), so no role check needed
         email = request.data.get('email')
         password = request.data.get('password')
         user, error_response = authenticate_user('student', email, password=password)
@@ -1121,23 +1234,24 @@ class LogoutView(APIView):
     """Logout endpoint to invalidate server-side sessions"""
     
     def post(self, request):
-        user_email = request.data.get('email')
+        # This endpoint is public (for logout), so no role check needed
+        email = request.data.get('email')
         user_type = request.data.get('user_type')
-        if user_email and user_type:
+        if email and user_type:
             if user_type == 'organization':
-                Organization.objects.filter(email=user_email).update(is_logged_in=False)
+                Organization.objects.filter(email=email).update(is_logged_in=False)
             elif user_type == 'teacher':
-                Teacher.objects.filter(email=user_email).update(is_logged_in=False)
+                Teacher.objects.filter(email=email).update(is_logged_in=False)
             elif user_type == 'student':
-                Student.objects.filter(email=user_email).update(is_logged_in=False)
+                Student.objects.filter(email=email).update(is_logged_in=False)
         # Clear any server-side session data
         if hasattr(request, 'session'):
             request.session.flush()
         
         # Clear any cached user data
-        if user_email and user_type:
+        if email and user_type:
             # Clear user-specific cache entries
-            cache_key = f"user_{user_type}_{user_email}"
+            cache_key = f"user_{user_type}_{email}"
             cache.delete(cache_key)
             
             # Clear teacher-specific caches if applicable
@@ -1159,6 +1273,7 @@ class VerifyAuthView(APIView):
     """Verify if user authentication is still valid"""
     
     def post(self, request):
+        # This endpoint is public (for auth verification), so no role check needed
         # Try to get from HTTP headers first (new system)
         email = request.META.get('HTTP_X_USER_EMAIL')
         user_type = request.META.get('HTTP_X_USER_TYPE')
