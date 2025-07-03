@@ -116,6 +116,10 @@ const TeacherDashboard = () => {
   // Add state for scheduled window
   const [selectedTestWindow, setSelectedTestWindow] = useState(null);
 
+  // 🧠 Add state
+  const [duplicateInvites, setDuplicateInvites] = useState([]);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+
   // Initialize authentication data
   useEffect(() => {
     const initializeAuth = () => {
@@ -153,19 +157,45 @@ const TeacherDashboard = () => {
     setAddLoading(true);
     setAddError('');
     try {
-      for (const q of paginatedPool.filter(q => selectedPoolIds.includes(q.id))) {
-        const res = await api.post('/api/question-create/', { ...q, test: selectedTest.id, subject: selectedTest.subject });
-        if (res.status === 201) {
-          const newQ = res.data;
-          setQuestions(prev => [...prev, newQ]);
-        } else {
-          setAddError('Failed to add one or more questions from pool.');
-        }
-      }
-      setSelectedPoolIds([]);
+      setQuestions(prevQuestions => {
+        const existingTexts = new Set(prevQuestions.map(q => q.text.trim().toLowerCase()));
+        const uniqueQuestions = paginatedPool.filter(q => 
+          selectedPoolIds.includes(q.id) && !existingTexts.has(q.text.trim().toLowerCase())
+        );
+        
+        // Add all unique questions to state immediately
+        const newQuestions = [...prevQuestions, ...uniqueQuestions];
+        
+        // Create questions in backend
+        uniqueQuestions.forEach(q => {
+          api.post('/api/question-create/', { ...q, test: selectedTest.id, subject: selectedTest.subject })
+            .then(res => {
+              if (res.status === 201) {
+                // Update with the actual backend response (which has the ID)
+                setQuestions(current => 
+                  current.map(question => 
+                    question === q ? res.data : question
+                  )
+                );
+              } else {
+                setAddError('Failed to add one or more questions from pool.');
+                // Remove from state if backend failed
+                setQuestions(current => current.filter(question => question !== q));
+              }
+            })
+            .catch(() => {
+              setAddError('Network error.');
+              // Remove from state if backend failed
+              setQuestions(current => current.filter(question => question !== q));
+            });
+        });
+        
+        setSelectedPoolIds([]);
+        setAddLoading(false);
+        return newQuestions;
+      });
     } catch {
       setAddError('Network error.');
-    } finally {
       setAddLoading(false);
     }
   };
@@ -186,20 +216,21 @@ const TeacherDashboard = () => {
   const calculateAnalytics = async (testData) => {
     try {
       const res = await api.get(`/api/teacher-analytics/?teacher_id=${teacherPk}`);
-      if (res.status === 200) {
+      if (res.status === 200 && res.data) {
         const data = res.data;
         setAnalytics({
-          totalTests: data.total_tests,
-          totalQuestions: data.total_questions,
-          totalStudents: data.total_students,
-          averageScore: data.average_score
+          totalTests: data.total_tests || 0,
+          totalQuestions: data.total_questions || 0,
+          totalStudents: data.total_students || 0,
+          averageScore: data.average_score || 0
         });
       }
     } catch (error) {
+      console.error('Analytics error:', error);
       // Fallback to basic calculations
-      const totalTests = testData.length;
+      const totalTests = Array.isArray(testData) ? testData.length : 0;
       setAnalytics({
-        totalTests,
+        totalTests: totalTests,
         totalQuestions: 0,
         totalStudents: 0,
         averageScore: 0
@@ -289,10 +320,10 @@ const TeacherDashboard = () => {
     setQError('');
     setQSuccess('');
     try {
-      const res = await api.patch(`/api/question-update/${editingQ}/`, { ...editForm });
+      const res = await api.patch(`/api/questions/${editingQ}/`, { ...editForm });
       if (res.status === 200) {
         const updated = res.data;
-        setQuestions(questions.map((q, i) => i === editingQIdx ? updated : q));
+        setQuestions(prev => prev.map((q, i) => i === editingQIdx ? updated : q));
         setQSuccess('Question updated!');
         setEditingQ(null);
         setEditingQIdx(null);
@@ -317,23 +348,29 @@ const TeacherDashboard = () => {
     setQError('');
     setQSuccess('');
     try {
-      const res = await api.delete(`/api/question-delete/${q.id}/`);
-      if (!res.ok) {
+      const res = await api.delete(`/api/questions/${q.id}/`);
+      if (res.status !== 204) {
         setQError('Failed to delete question.');
         return;
       }
+      // Success - remove from UI immediately
+      setQuestions(prevQuestions => {
+        const updated = prevQuestions.filter((question) => question.id !== q.id);
+        // Adjust selectedQIndex if needed
+        if (selectedQIndex >= updated.length) {
+          setSelectedQIndex(Math.max(0, updated.length - 1));
+        }
+        return updated;
+      });
+      setQSuccess('Question deleted.');
+      if (editingQIdx === idx) {
+        setEditingQ(null);
+        setEditingQIdx(null);
+      }
+      fetchTestPoints(selectedTest.id); // Always refresh points
     } catch {
       setQError('Network error.');
-      return;
     }
-    setQuestions(questions.filter((_, i) => i !== idx));
-    setQSuccess('Question deleted.');
-    if (editingQIdx === idx) {
-      setEditingQ(null);
-      setEditingQIdx(null);
-    }
-    if (selectedQIndex >= questions.length - 1) setSelectedQIndex(0);
-    fetchTestPoints(selectedTest.id); // Always refresh points
   };
 
   const handleAddFormChange = (e) => {
@@ -524,18 +561,45 @@ const TeacherDashboard = () => {
   const handleInviteSelected = async () => {
     setInviteLoading(true);
     setInviteError('');
+
     try {
-      const res = await api.post('/api/invite-students/', { emails: selectedInviteStudents, teacher_id: teacherPk });
-      const data = res.data;
+      if (!selectedTestForInvite) {
+        setInviteError('No test selected for inviting students.');
+        setInviteLoading(false);
+        return;
+      }
+      const payload = {
+        teacher_name: teacherName,
+        students: selectedInviteStudents,
+        time_to_start: selectedTestWindow?.start?.toISOString() || new Date().toISOString(),
+        duration_minutes: selectedTestWindow?.duration || selectedTestForInvite.duration_minutes || 60,
+        title: selectedTestForInvite.name,
+        description: selectedTestForInvite.description,
+        subject: selectedTestForInvite.subject,
+        point_value: testPoints[selectedTestForInvite.id] || 1,
+        test_id: selectedTestForInvite.id,
+      };
+      const res = await api.post('/api/invite-test/', payload);
+
       if (res.status === 200) {
         setShowInviteModal(false);
         setSelectedInviteStudents([]);
         setSelectAllInvite(false);
       } else {
-        setInviteError(data?.error || 'Failed to send invites.');
+        setDuplicateInvites([res.data?.error || 'Failed to send invites.']);
+        setShowDuplicateDialog(true);
       }
-    } catch {
-      setInviteError('Network error.');
+    } catch (err) {
+      if (err.isDuplicateInvite) {
+        setDuplicateInvites(err.duplicates);
+        setShowDuplicateDialog(true);
+      } else if (err.response && err.response.status === 409 && err.response.data.duplicates) {
+        setDuplicateInvites(err.response.data.duplicates);
+        setShowDuplicateDialog(true);
+      } else {
+        setDuplicateInvites([err.response?.data?.error || 'A network or server error occurred. Please try again.']);
+        setShowDuplicateDialog(true);
+      }
     } finally {
       setInviteLoading(false);
     }
@@ -698,6 +762,24 @@ const TeacherDashboard = () => {
                   <option key={subject} value={subject}>{subject}</option>
                 ))}
               </select>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 7,
+                  border: '1px solid #bdbdbd',
+                  background: '#f3f4f6',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+                title="Refresh the entire page"
+              >
+                &#x21bb; Refresh
+              </button>
             </div>
             <ul
               style={{
@@ -918,16 +1000,47 @@ const TeacherDashboard = () => {
                       setAddLoading(true);
                       setAddError('');
                       try {
-                        const res = await api.post('/api/question-create/', { ...q, test: selectedTest.id, subject: selectedTest.subject });
-                        if (res.status === 201) {
-                          const newQ = res.data;
-                          setQuestions([...questions, newQ]);
-                        } else {
-                          setAddError('Failed to add question from pool.');
-                        }
+                        // Use functional form to get latest state
+                        setQuestions(prevQuestions => {
+                          const exists = prevQuestions.some(qq => qq.text.trim().toLowerCase() === q.text.trim().toLowerCase());
+                          if (exists) {
+                            // silently skip duplicate
+                            setAddLoading(false);
+                            return prevQuestions; // return unchanged state
+                          }
+                          
+                          // Add the question immediately to state
+                          const newQuestions = [...prevQuestions, q];
+                          
+                          // Also create the question in backend
+                          api.post('/api/question-create/', { ...q, test: selectedTest.id, subject: selectedTest.subject })
+                            .then(res => {
+                              if (res.status === 201) {
+                                // Update with the actual backend response (which has the ID)
+                                setQuestions(current => 
+                                  current.map(question => 
+                                    question === q ? res.data : question
+                                  )
+                                );
+                              } else {
+                                setAddError('Failed to add question from pool.');
+                                // Remove from state if backend failed
+                                setQuestions(current => current.filter(question => question !== q));
+                              }
+                            })
+                            .catch(() => {
+                              setAddError('Network error.');
+                              // Remove from state if backend failed
+                              setQuestions(current => current.filter(question => question !== q));
+                            })
+                            .finally(() => {
+                              setAddLoading(false);
+                            });
+                          
+                          return newQuestions;
+                        });
                       } catch {
                         setAddError('Network error.');
-                      } finally {
                         setAddLoading(false);
                       }
                     }}
@@ -938,9 +1051,9 @@ const TeacherDashboard = () => {
               <div style={{ flex: '2 1 700px', minWidth: 400, maxWidth: 900 }}>
                 {questions.length > 1 && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 24, justifyContent: 'center' }}>
-                    {questions.map((_, idx) => (
+                    {questions.map((q, idx) => (
                       <button
-                        key={idx}
+                        key={q.id || idx}
                         style={{
                           padding: '8px 16px',
                           borderRadius: 8,
@@ -1355,6 +1468,22 @@ const TeacherDashboard = () => {
           test={selectedTestForInvite}
           testId={selectedTestForInvite?.id}
         />
+      )}
+      {showDuplicateDialog && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h3>Duplicate Invites Detected</h3>
+            <p>The following student(s) are already invited to this test:</p>
+            <ul>
+              {duplicateInvites.map((email) => (
+                <li key={email} style={{ marginBottom: 4 }}>{email}</li>
+              ))}
+            </ul>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setShowDuplicateDialog(false)}>Close</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

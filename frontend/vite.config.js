@@ -17,7 +17,7 @@ export default defineConfig({
     proxy: {
       // Proxy API requests to Django backend
       '/api': {
-        target: process.env.VITE_API_URL || 'http://192.168.1.71:8000',
+        target: process.env.VITE_API_URL || 'http://0.0.0.0:8000/',
         changeOrigin: true,
         secure: false,
       },

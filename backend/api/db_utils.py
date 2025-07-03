@@ -35,23 +35,14 @@ def get_cached_teacher_tests(teacher_id, cache_duration=300):
     return tests
 
 
-def get_cached_test_questions(test_id, cache_duration=600):
+def get_cached_test_questions(test_id, cache_duration=0):
     """
-    Get test questions with caching
-    
-    Args:
-        test_id: Test ID
-        cache_duration: Cache duration in seconds (default: 10 minutes)
-    
-    Returns:
-        list: List of question data
+    Get test questions with caching (now disabled for instant fetch)
     """
     cache_key = f'test_questions_{test_id}'
     cached_data = cache.get(cache_key)
-    
-    if cached_data:
+    if cache_duration > 0 and cached_data:
         return cached_data
-    
     questions = Question.objects.filter(test_id=test_id).order_by('created_at')
     data = [
         {
@@ -66,10 +57,8 @@ def get_cached_test_questions(test_id, cache_duration=600):
         }
         for q in questions
     ]
-    
-    # Cache for specified duration
-    cache.set(cache_key, data, cache_duration)
-    
+    if cache_duration > 0:
+        cache.set(cache_key, data, cache_duration)
     return data
 
 

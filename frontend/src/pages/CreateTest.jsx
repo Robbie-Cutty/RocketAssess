@@ -44,20 +44,38 @@ const CreateTest = () => {
     setError('');
     setLoading(true);
     setSuccess('');
+    
     if (!form.name.trim()) {
       setError('Test name is required.');
+      setLoading(false);
       return;
     }
+    
+    if (!teacherId) {
+      setError('Teacher ID not found. Please log in again.');
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const res = await api.post('/api/test-create/', { ...form, teacher: teacherId });
-      if (res.status === 201) {
+      const res = await api.post('/api/test-create/', { 
+        ...form, 
+        teacher: teacherId,
+        name: form.name.trim(),
+        subject: form.subject.trim(),
+        description: form.description.trim()
+      });
+      
+      if (res.status === 201 && res.data) {
+        setTestId(res.data.id);
         setSuccess(true);
       } else {
         const data = res.data || {};
         setError(data?.error || 'Failed to create test.');
       }
-    } catch {
-      setError('Network error.');
+    } catch (err) {
+      console.error('Create test error:', err);
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -112,27 +130,46 @@ const CreateTest = () => {
     e.preventDefault();
     setQError('');
     setQSuccess('');
+    
     if (!qForm.text.trim() || !qForm.option_a.trim() || !qForm.option_b.trim() || !qForm.option_c.trim() || !qForm.option_d.trim()) {
       setQError('All fields are required.');
       return;
     }
+    
     if (!['A','B','C','D'].includes(qForm.correct_answer)) {
       setQError('Correct answer must be A, B, C, or D.');
       return;
     }
+    
     if (!qForm.point_value || isNaN(qForm.point_value) || qForm.point_value < 1) {
       setQError('Point value must be a positive number.');
       return;
     }
+    
+    if (!testId) {
+      setQError('Test ID not found. Please create the test first.');
+      return;
+    }
+    
     setQLoading(true);
     try {
       if (editingId) {
         // Update existing question
-        const res = await api.patch(`/api/question-update/${editingId}/`, { ...qForm, test: testId });
-        if (res.status === 200) {
+        const res = await api.patch(`/api/question-update/${editingId}/`, { 
+          ...qForm, 
+          test: testId,
+          text: qForm.text.trim(),
+          option_a: qForm.option_a.trim(),
+          option_b: qForm.option_b.trim(),
+          option_c: qForm.option_c.trim(),
+          option_d: qForm.option_d.trim()
+        });
+        
+        if (res.status === 200 && res.data) {
           const updated = res.data;
           setQuestions(questions.map((q, i) => i === editingIndex ? updated : q));
           setQSuccess('Question updated!');
+          setQForm(initialQuestion);
         } else {
           const data = res.data || {};
           setQError(data?.error || 'Failed to update question.');
@@ -141,9 +178,18 @@ const CreateTest = () => {
         setEditingId(null);
       } else {
         // Create new question
-        const res = await api.post('/api/question-create/', { ...qForm, test: testId });
-        if (res.status === 201) {
-          setQuestions([...questions, qForm]);
+        const res = await api.post('/api/question-create/', { 
+          ...qForm, 
+          test: testId,
+          text: qForm.text.trim(),
+          option_a: qForm.option_a.trim(),
+          option_b: qForm.option_b.trim(),
+          option_c: qForm.option_c.trim(),
+          option_d: qForm.option_d.trim()
+        });
+        
+        if (res.status === 201 && res.data) {
+          setQuestions([...questions, res.data]);
           setQForm(initialQuestion);
           setQSuccess('Question added!');
         } else {
@@ -151,7 +197,8 @@ const CreateTest = () => {
           setQError(data?.error || 'Failed to add question.');
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('Question submit error:', err);
       setQError('Network error. Please try again.');
     } finally {
       setQLoading(false);

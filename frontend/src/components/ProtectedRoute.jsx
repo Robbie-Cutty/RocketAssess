@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import sessionManager from '../utils/sessionManager';
+import api from '../utils/axios';
 
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -29,7 +30,7 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
         // Get authentication data from session manager
         const authData = sessionManager.getAuthData();
-        if (!authData) {
+        if (!authData || !authData.email || !authData.user_type) {
           sessionManager.clearSession();
           setIsAuthenticated(false);
           setIsLoading(false);
@@ -46,43 +47,42 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
           return;
         }
 
-        // Make server-side verification call
-        const response = await fetch('/api/verify-auth/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          },
-          body: JSON.stringify({
+        // Make server-side verification call with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        try {
+          const response = await api.post('/api/verify-auth/', {
             email: email,
             user_type: currentRole
-          })
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          // Refresh session timestamp on successful verification
-          sessionManager.refreshSession();
-          setIsAuthenticated(true);
-        } else {
-          // Clear session and all authentication data
-          sessionManager.clearSession();
-          localStorage.removeItem('student_name');
-          localStorage.removeItem('student_email');
-          localStorage.removeItem('teacher_name');
-          localStorage.removeItem('teacher_pk');
-          Cookies.remove('teacher_name');
-          Cookies.remove('org_name');
-          Cookies.remove('token');
-          Cookies.remove('user_email');
-          Cookies.remove('teacher_id');
-          Cookies.remove('teacher_pk');
-          Cookies.remove('org_code');
+          }, {
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (response.status === 200) {
+            // Refresh session timestamp on successful verification
+            sessionManager.refreshSession();
+            setIsAuthenticated(true);
+          } else {
+            // Clear session and all authentication data
+            sessionManager.clearAllAuthData();
+            setIsAuthenticated(false);
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          if (fetchError.name === 'AbortError') {
+            console.error('Authentication verification timeout');
+          } else {
+            console.error('Authentication verification error:', fetchError);
+          }
+          sessionManager.clearAllAuthData();
           setIsAuthenticated(false);
         }
       } catch (error) {
-        sessionManager.clearSession();
+        console.error('ProtectedRoute error:', error);
+        sessionManager.clearAllAuthData();
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);

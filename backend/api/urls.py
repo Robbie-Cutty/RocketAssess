@@ -26,8 +26,7 @@ urlpatterns = [
     # Question endpoints
     path('question-create/', views.QuestionCreateView.as_view(), name='create-question'),
     path('question-list/', views.QuestionListView.as_view(), name='list-questions'),
-    path('question-update/<int:pk>/', views.QuestionUpdateView.as_view(), name='update-question'),
-    path('question-delete/<int:pk>/', views.QuestionDeleteView.as_view(), name='delete-question'),
+    path('questions/<int:pk>/', views.QuestionDetailView.as_view(), name='question-detail'),
     path('question-pool/', views.QuestionPoolView.as_view(), name='question-pool'),
     path('deduplicate-questions/', views.deduplicate_questions, name='deduplicate-questions'),
     

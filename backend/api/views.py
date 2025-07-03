@@ -8,13 +8,12 @@ from django.core.mail import send_mail
 from django.conf import settings
 import re
 from rest_framework.permissions import AllowAny
-from rest_framework.generics import UpdateAPIView, DestroyAPIView
+from rest_framework.generics import UpdateAPIView, DestroyAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.decorators import api_view
 from django.contrib.auth.models import User
 from django.utils.crypto import get_random_string
 from django.contrib.auth.hashers import make_password, check_password
 from datetime import datetime, timedelta
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.db.models import Sum
 from django.core.cache import cache
@@ -30,6 +29,8 @@ from .db_utils import (
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,7 @@ def check_authentication(request):
     else:
         raise PermissionDenied("Invalid user type")
 
+@method_decorator(csrf_exempt, name='dispatch')
 class OrganizationRegisterView(APIView):
     def post(self, request):
         # This endpoint is public (for registration), so no role check needed
@@ -179,6 +181,7 @@ class OrganizationRegisterView(APIView):
                 return Response({'error': 'Unexpected error: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class OrganizationLoginView(APIView):
     def post(self, request):
         # This endpoint is public (for login), so no role check needed
@@ -191,6 +194,7 @@ class OrganizationLoginView(APIView):
         response_data = get_user_response_data(user, 'organization')
         return Response(response_data, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TeacherInviteView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -224,6 +228,7 @@ class TeacherInviteView(APIView):
                 results.append({'email': email, 'status': 'error', 'error': str(e)})
         return Response({'results': results}, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TeacherListView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -247,6 +252,7 @@ class TeacherListView(APIView):
         except Organization.DoesNotExist:
             return Response({'error': 'Organization not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TeacherRegisterView(APIView):
     def post(self, request):
         # This endpoint is public (for registration), so no role check needed
@@ -288,6 +294,7 @@ class TeacherRegisterView(APIView):
                 return Response({'error': 'Unexpected error: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TeacherLoginView(APIView):
     def post(self, request):
         # This endpoint is public (for login), so no role check needed
@@ -300,6 +307,7 @@ class TeacherLoginView(APIView):
         response_data = get_user_response_data(user, 'teacher')
         return Response(response_data, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TestCreateView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -319,6 +327,7 @@ class TestCreateView(APIView):
             return Response(TestSerializer(test).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TestListView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -344,6 +353,7 @@ class TestListView(APIView):
         
         return Response(tests, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class QuestionCreateView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -359,19 +369,14 @@ class QuestionCreateView(APIView):
         
         serializer = QuestionSerializer(data=request.data)
         if serializer.is_valid():
-            # Check for duplicate questions using shared utility
-            if check_duplicate_question(
-                serializer.validated_data['test'].id,
-                serializer.validated_data['text']
-            ):
-                return Response({'error': 'This question already exists in this test.'}, status=status.HTTP_400_BAD_REQUEST)
-            
+            # Removed duplicate check to allow adding same question text to a test
             question = serializer.save()
             # Clear cache for this test
             clear_test_cache(question.test.id)
             return Response(QuestionSerializer(question).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class QuestionListView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -401,42 +406,13 @@ class QuestionListView(APIView):
         questions = get_cached_test_questions(test_id)
         return Response(questions, status=status.HTTP_200_OK)
 
-class QuestionUpdateView(UpdateAPIView):
+@method_decorator(csrf_exempt, name='dispatch')
+class QuestionDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
-    
-    def dispatch(self, request, *args, **kwargs):
-        check_authentication(request)
-        return super().dispatch(request, *args, **kwargs)
-    
-    def patch(self, request, *args, **kwargs):
-        # Check if user is a teacher
-        user_type = request.META.get('HTTP_X_USER_TYPE')
-        if user_type != 'teacher':
-            return Response({
-                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        return super().patch(request, *args, **kwargs)
+    # Add any permission or authentication logic as needed
 
-class QuestionDeleteView(DestroyAPIView):
-    queryset = Question.objects.all()
-    serializer_class = QuestionSerializer
-    
-    def dispatch(self, request, *args, **kwargs):
-        check_authentication(request)
-        return super().dispatch(request, *args, **kwargs)
-    
-    def delete(self, request, *args, **kwargs):
-        # Check if user is a teacher
-        user_type = request.META.get('HTTP_X_USER_TYPE')
-        if user_type != 'teacher':
-            return Response({
-                'error': f'Access denied. This endpoint requires teacher privileges. You are authenticated as: {user_type}'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        return super().delete(request, *args, **kwargs)
-
+@method_decorator(csrf_exempt, name='dispatch')
 class QuestionPoolView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -465,6 +441,7 @@ class QuestionPoolView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 # Utility endpoint to delete all but one of each case-insensitive duplicate question per test
+@csrf_exempt
 @api_view(['POST'])
 @login_required
 def deduplicate_questions(request):
@@ -480,6 +457,7 @@ def deduplicate_questions(request):
                 seen[key] = q.id
     return Response({'deleted': deleted}, status=200)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def teacher_org_info(request):
@@ -493,6 +471,7 @@ def teacher_org_info(request):
     except Teacher.DoesNotExist:
         return Response({'error': 'Teacher not found'}, status=404)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class StudentRegisterView(APIView):
     def post(self, request):
         # This endpoint is public (for registration), so no role check needed
@@ -542,6 +521,7 @@ class StudentRegisterView(APIView):
         except IntegrityError:
             return Response({'error': 'Registration failed.'}, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class StudentInviteView(APIView):
     def dispatch(self, request, *args, **kwargs):
         check_authentication(request)
@@ -602,6 +582,7 @@ class StudentInviteView(APIView):
                 results.append({'email': email, 'status': 'error', 'error': str(e)})
         return Response({'results': results}, status=status.HTTP_200_OK)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def organization_lookup(request):
@@ -614,6 +595,7 @@ def organization_lookup(request):
     except Organization.DoesNotExist:
         return Response({'error': 'Organization not found'}, status=404)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class StudentLoginView(APIView):
     def post(self, request):
         # This endpoint is public (for login), so no role check needed
@@ -626,6 +608,7 @@ class StudentLoginView(APIView):
         response_data = get_user_response_data(user, 'student')
         return Response(response_data, status=status.HTTP_200_OK)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def student_profile(request):
@@ -642,6 +625,7 @@ def student_profile(request):
     except Student.DoesNotExist:
         return Response({'error': 'Student not found'}, status=404)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def invited_students(request):
@@ -662,6 +646,7 @@ def invited_students(request):
         })
     return Response({'invited_students': results})
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def teacher_students(request):
@@ -731,25 +716,13 @@ def invite_test(request):
     except Exception as e:
         return Response({'error': 'Invalid time format.'}, status=400)
 
-    # Anti-duplicate logic
-    duplicates = []
-    for student_email in students:
-        if TestInvite.objects.filter(
-            title=title,
-            student_email=student_email,
-            time_to_start=start_dt
-        ).exists():
-            duplicates.append(student_email)
-    if duplicates:
-        return Response({
-            'error': 'Duplicate invite(s) detected.',
-            'duplicates': duplicates
-        }, status=409)
-
-    # If no duplicates, proceed to create invites
+    # Per-student invite logic
     results = []
     for student_email in students:
         try:
+            if TestInvite.objects.filter(test_id=test_id, student_email=student_email).exists():
+                results.append({'email': student_email, 'status': 'duplicate'})
+                continue
             invite = TestInvite.objects.create(
                 test=test,  # Link to the test
                 teacher_name=teacher_name,
@@ -768,6 +741,7 @@ def invite_test(request):
 
     return Response({'results': results}, status=200)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def test_detail(request):
@@ -805,6 +779,7 @@ def test_detail(request):
     except Test.DoesNotExist:
         return Response({'error': 'Test not found.'}, status=404)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def list_test_invites(request):
@@ -812,6 +787,7 @@ def list_test_invites(request):
     invites = TestInvite.objects.all().values()
     return Response(list(invites))
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def student_test_invites(request):
@@ -857,6 +833,7 @@ def student_test_invites(request):
     
     return Response(data)
 
+@csrf_exempt
 @api_view(['POST'])
 @login_required
 def mark_invite_added(request):
@@ -978,6 +955,7 @@ def submit_test(request):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def student_completed_tests(request):
@@ -1010,6 +988,7 @@ def student_completed_tests(request):
     except Student.DoesNotExist:
         return Response({'error': 'Student not found'}, status=404)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def submission_detail(request, submission_id):
@@ -1061,6 +1040,7 @@ def submission_detail(request, submission_id):
     except Submission.DoesNotExist:
         return Response({'error': 'Submission not found'}, status=404)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def test_submissions(request):
@@ -1105,6 +1085,7 @@ def test_submissions(request):
     
     return Response(data)
 
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def test_attendance(request):
@@ -1128,6 +1109,7 @@ def test_attendance(request):
         })
     return Response({'attendance': attendance})
 
+@csrf_exempt
 @api_view(['GET', 'PUT'])
 @login_required
 def organization_profile(request):
@@ -1186,37 +1168,7 @@ def organization_profile(request):
         except Exception as e:
             return Response({'error': f'Update failed: {str(e)}'}, status=400)
 
-@api_view(['GET'])
-def health_check(request):
-    """Health check endpoint for monitoring"""
-    try:
-        # Check database connectivity
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-        
-        # Check Redis connectivity (skip if Redis not available)
-        try:
-            cache.set('health_check', 'ok', 60)
-            cache_result = cache.get('health_check')
-            cache_status = 'connected' if cache_result == 'ok' else 'disconnected'
-        except:
-            cache_status = 'not_configured'
-        
-        return Response({
-            'status': 'healthy',
-            'database': 'connected',
-            'cache': cache_status,
-            'timestamp': datetime.now().isoformat()
-        }, status=200)
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return Response({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }, status=500)
-
+@csrf_exempt
 @api_view(['GET'])
 @login_required
 def teacher_analytics(request):
@@ -1265,91 +1217,6 @@ def teacher_analytics(request):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
-class LogoutView(APIView):
-    """Logout endpoint to invalidate server-side sessions"""
-    
-    def post(self, request):
-        # This endpoint is public (for logout), so no role check needed
-        email = request.data.get('email')
-        user_type = request.data.get('user_type')
-        if email and user_type:
-            if user_type == 'organization':
-                Organization.objects.filter(email=email).update(is_logged_in=False)
-            elif user_type == 'teacher':
-                Teacher.objects.filter(email=email).update(is_logged_in=False)
-            elif user_type == 'student':
-                Student.objects.filter(email=email).update(is_logged_in=False)
-        # Clear any server-side session data
-        if hasattr(request, 'session'):
-            request.session.flush()
-        
-        # Clear any cached user data
-        if email and user_type:
-            # Clear user-specific cache entries
-            cache_key = f"user_{user_type}_{email}"
-            cache.delete(cache_key)
-            
-            # Clear teacher-specific caches if applicable
-            if user_type == 'teacher':
-                teacher_pk = request.data.get('teacher_pk')
-                if teacher_pk:
-                    cache.delete(f"teacher_tests_{teacher_pk}")
-                    cache.delete(f"teacher_questions_{teacher_pk}")
-        
-        # Set cache control headers in response
-        response = Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
-        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response['Pragma'] = 'no-cache'
-        response['Expires'] = '0'
-        
-        return response
-
-class VerifyAuthView(APIView):
-    """Verify if user authentication is still valid"""
-    
-    def post(self, request):
-        # This endpoint is public (for auth verification), so no role check needed
-        # Try to get from HTTP headers first (new system)
-        email = request.META.get('HTTP_X_USER_EMAIL')
-        user_type = request.META.get('HTTP_X_USER_TYPE')
-        
-        # If not in headers, try to get from request body (fallback)
-        if not email or not user_type:
-            email = request.data.get('email')
-            user_type = request.data.get('user_type')
-        
-        if not email or not user_type:
-            response = Response({'error': 'Email and user_type required'}, status=status.HTTP_400_BAD_REQUEST)
-            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            return response
-        
-        try:
-            if user_type == 'organization':
-                org = Organization.objects.get(email=email)
-                is_valid = org.is_logged_in
-            elif user_type == 'teacher':
-                teacher = Teacher.objects.get(email=email)
-                is_valid = teacher.is_logged_in
-            elif user_type == 'student':
-                student = Student.objects.get(email=email)
-                is_valid = student.is_logged_in
-            else:
-                is_valid = False
-        except (Organization.DoesNotExist, Teacher.DoesNotExist, Student.DoesNotExist):
-            is_valid = False
-        
-        if is_valid:
-            response = Response({'valid': True, 'user_type': user_type}, status=status.HTTP_200_OK)
-        else:
-            response = Response({'valid': False, 'error': 'Invalid authentication'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        # Set cache control headers
-        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response['Pragma'] = 'no-cache'
-        response['Expires'] = '0'
-        
-        return response 
-
 @csrf_exempt
 @api_view(['POST'])
 @login_required
@@ -1383,4 +1250,106 @@ def start_test(request):
     except Student.DoesNotExist:
         return Response({'error': 'Student not found'}, status=404)
     except Exception as e:
-        return Response({'error': str(e)}, status=500) 
+        return Response({'error': str(e)}, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class LogoutView(APIView):
+    """
+    Logout endpoint to invalidate server-side sessions
+    """
+    def post(self, request):
+        email = request.data.get('email')
+        user_type = request.data.get('user_type')
+        if email and user_type:
+            if user_type == 'organization':
+                Organization.objects.filter(email=email).update(is_logged_in=False)
+            elif user_type == 'teacher':
+                Teacher.objects.filter(email=email).update(is_logged_in=False)
+            elif user_type == 'student':
+                Student.objects.filter(email=email).update(is_logged_in=False)
+        # Clear any server-side session data
+        if hasattr(request, 'session'):
+            request.session.flush()
+        # Clear any cached user data
+        if email and user_type:
+            cache_key = f"user_{user_type}_{email}"
+            cache.delete(cache_key)
+        response = Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response 
+
+@method_decorator(csrf_exempt, name='dispatch')
+class VerifyAuthView(APIView):
+    """
+    Verify if user authentication is still valid
+    """
+    def post(self, request):
+        # This endpoint is public (for auth verification), so no role check needed
+        # Try to get from HTTP headers first (new system)
+        email = request.META.get('HTTP_X_USER_EMAIL')
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        # If not in headers, try to get from request body (fallback)
+        if not email or not user_type:
+            email = request.data.get('email')
+            user_type = request.data.get('user_type')
+        if not email or not user_type:
+            response = Response({'error': 'Email and user_type required'}, status=status.HTTP_400_BAD_REQUEST)
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            return response
+        try:
+            if user_type == 'organization':
+                org = Organization.objects.get(email=email)
+                is_valid = org.is_logged_in
+            elif user_type == 'teacher':
+                teacher = Teacher.objects.get(email=email)
+                is_valid = teacher.is_logged_in
+            elif user_type == 'student':
+                student = Student.objects.get(email=email)
+                is_valid = student.is_logged_in
+            else:
+                is_valid = False
+        except (Organization.DoesNotExist, Teacher.DoesNotExist, Student.DoesNotExist):
+            is_valid = False
+        if is_valid:
+            response = Response({'valid': True, 'user_type': user_type}, status=status.HTTP_200_OK)
+        else:
+            response = Response({'valid': False, 'error': 'Invalid authentication'}, status=status.HTTP_401_UNAUTHORIZED)
+        # Set cache control headers
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response 
+
+@csrf_exempt
+@api_view(['GET'])
+def health_check(request):
+    """Health check endpoint for monitoring"""
+    try:
+        # Check database connectivity
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        
+        # Check Redis connectivity (skip if Redis not available)
+        try:
+            cache.set('health_check', 'ok', 60)
+            cache_result = cache.get('health_check')
+            cache_status = 'connected' if cache_result == 'ok' else 'disconnected'
+        except:
+            cache_status = 'not_configured'
+        
+        return Response({
+            'status': 'healthy',
+            'database': 'connected',
+            'cache': cache_status,
+            'timestamp': datetime.now().isoformat()
+        }, status=200)
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return Response({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }, status=500) 

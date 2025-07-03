@@ -84,8 +84,8 @@ const TestResults = () => {
               {submissions.map((s, idx) => (
                 <tr key={s.submission_id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
                   <td style={{ padding: 8, textAlign: 'center' }}>{idx + 1}</td>
-                  <td style={{ padding: 8 }}>{s.student_name || s.student_email}</td>
-                  <td style={{ padding: 8, textAlign: 'center' }}>{s.score.toFixed(1)}%</td>
+                  <td style={{ padding: 8 }}>{s.student_name || s.student_email || <span style={{ color: '#64748b' }}>-</span>}</td>
+                  <td style={{ padding: 8, textAlign: 'center' }}>{typeof s.score === 'number' ? s.score.toFixed(1) + '%' : '-'}</td>
                   <td style={{ padding: 8, textAlign: 'center', whiteSpace: 'pre-line', fontSize: 14 }}>
                     {(() => {
                       const enteredAtInfo = getEnteredAt(s);
@@ -102,7 +102,8 @@ const TestResults = () => {
                   <td style={{ padding: 8, textAlign: 'center' }}>
                     <button
                       className="btn btn-xs btn-outline"
-                      onClick={() => navigate(`/review/${s.submission_id}`, { state: { fromResults: true, testId, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, scheduled_duration: s.scheduled_duration } })}
+                      onClick={() => navigate(`/review/${s.submission_id}`, { state: { fromResults: true, testId: testId || '', scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, scheduled_duration: s.scheduled_duration } })}
+                      disabled={!s.submission_id}
                     >
                       View
                     </button>

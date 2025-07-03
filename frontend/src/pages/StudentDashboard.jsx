@@ -50,26 +50,54 @@ const StudentDashboard = () => {
   const fetchInvites = () => {
     if (!email) return;
     setLoading(true);
+    setError('');
     api.get(`/api/student-test-invites/?email=${encodeURIComponent(email)}&added=false`)
       .then(res => {
-        setInvites(res.data.invites || []);
+        if (res.status === 200 && res.data) {
+          setInvites(Array.isArray(res.data.invites) ? res.data.invites : []);
+        } else {
+          setInvites([]);
+        }
         setError('');
       })
-      .catch(() => setError('Failed to fetch test invites.'))
+      .catch((err) => {
+        console.error('Fetch invites error:', err);
+        setError('Failed to fetch test invites.');
+        setInvites([]);
+      })
       .finally(() => setLoading(false));
   };
 
   const fetchTests = () => {
     if (!email) return;
     api.get(`/api/student-test-invites/?email=${encodeURIComponent(email)}&added=true`)
-      .then(res => setTests(res.data.invites || []));
+      .then(res => {
+        if (res.status === 200 && res.data) {
+          setTests(Array.isArray(res.data.invites) ? res.data.invites : []);
+        } else {
+          setTests([]);
+        }
+      })
+      .catch((err) => {
+        console.error('Fetch tests error:', err);
+        setTests([]);
+      });
   };
 
   const fetchCompletedTests = () => {
     if (!email) return;
     api.get(`/api/student-completed-tests/?email=${encodeURIComponent(email)}`)
-      .then(res => setCompletedTests(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setCompletedTests([]));
+      .then(res => {
+        if (res.status === 200) {
+          setCompletedTests(Array.isArray(res.data) ? res.data : []);
+        } else {
+          setCompletedTests([]);
+        }
+      })
+      .catch((err) => {
+        console.error('Fetch completed tests error:', err);
+        setCompletedTests([]);
+      });
   };
 
   useEffect(() => {
@@ -96,6 +124,7 @@ const StudentDashboard = () => {
       const data = res.data;
       if (res.status === 200 && data.success) {
         fetchTests(); // Only fetch tests, not invites
+        setActiveTab('tests'); // Switch to queued tests tab
       } else {
         setError(data.error || 'Failed to add test.');
         setInvites(prevInvites); // Restore if error

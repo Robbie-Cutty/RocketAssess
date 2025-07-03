@@ -3,10 +3,11 @@ import Cookies from 'js-cookie';
 import api from '../utils/axios';
 
 function parseEmails(input) {
+  if (!input || typeof input !== 'string') return [];
   return input
     .split(/[,;\n]+/)
     .map(e => e.trim())
-    .filter(e => e.length > 0);
+    .filter(e => e.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
 }
 
 const InviteStudentsPage = () => {
@@ -35,20 +36,36 @@ const InviteStudentsPage = () => {
     setStatus('');
     setError('');
     setInviteResults([]);
+    
+    if (!emails || emails.length === 0) {
+      setError('Please add at least one email address.');
+      return;
+    }
+    
+    if (!teacherId) {
+      setError('Teacher ID not found. Please log in again.');
+      return;
+    }
+    
     setLoading(true);
     try {
-      const res = await api.post('/api/invite-students/', { emails, teacher_id: teacherId });
-      const data = res.data;
-      if (res.status === 200) {
+      const res = await api.post('/api/invite-students/', { 
+        emails: emails.filter(email => email && email.trim()), 
+        teacher_id: teacherId 
+      });
+      
+      if (res.status === 200 && res.data) {
         setStatus('Invitations processed!');
         setBulkInput('');
         setEmails([]);
-        setInviteResults(data.results || []);
+        setInviteResults(Array.isArray(res.data.results) ? res.data.results : []);
       } else {
+        const data = res.data || {};
         setError(data?.error || 'Failed to send invites.');
       }
-    } catch {
-      setError('Network error.');
+    } catch (err) {
+      console.error('Invite students error:', err);
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }

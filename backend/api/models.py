@@ -110,7 +110,7 @@ class TestInvite(models.Model):
             models.Index(fields=['time_to_start']),
             models.Index(fields=['student_email']),
         ]
-        unique_together = ('title', 'student_email', 'time_to_start')
+        unique_together = (('test', 'student_email'),)
 
     def __str__(self):
         return f"Test: {self.title} for {self.teacher_name} (Student: {self.student_email or 'Not assigned'})"

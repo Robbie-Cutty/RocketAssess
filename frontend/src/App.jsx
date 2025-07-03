@@ -94,6 +94,11 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              <Route path="/invite-students" element={
+                <ProtectedRoute requiredRole="teacher">
+                  <InviteStudentsPage />
+                </ProtectedRoute>
+              } />
               <Route path="/invite-students/:testId" element={
                 <ProtectedRoute requiredRole="teacher">
                   <InviteStudentsPage />

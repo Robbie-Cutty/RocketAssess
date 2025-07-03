@@ -62,11 +62,11 @@ const TestReview = () => {
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
   if (error) return <div style={{ padding: 40, color: '#dc2626', textAlign: 'center' }}>{error}</div>;
-  if (!submission) return null;
+  if (!submission || !Array.isArray(submission.questions) || submission.questions.length === 0) return <div style={{ padding: 40, textAlign: 'center' }}>No questions found for this submission.</div>;
 
   const questions = submission.questions;
-  const q = questions[current];
-  const student = submission.student;
+  const q = questions[current] || {};
+  const student = submission.student || {};
 
   // Pagination UI for questions
   const renderPagination = () => {
@@ -154,22 +154,31 @@ const TestReview = () => {
           </div>
         )}
         <div className="mb-2 text-secondary">{submission.test.subject} &middot; {submission.test.description}</div>
-        <div style={{
-          background: '#f8fafc',
-          borderRadius: 10,
-          padding: 24,
-          margin: '0 0 24px 0',
-          textAlign: 'center',
-          fontWeight: 700,
-          fontSize: 22
-        }}>
-          Time in Test<br />
-          <span style={{ fontWeight: 600, fontSize: 20 }}>
-            Entered: {enteredAtInfo.value ? enteredAtInfo.value.toLocaleString() : '-'}
-            {enteredAtInfo.estimated && <span style={{ color: '#f59e42', fontWeight: 400 }}> (estimated)</span>}<br />
-            End: {submission.submitted_at ? new Date(submission.submitted_at).toLocaleString() : '-'}<br />
-            Duration: {formatDuration(submission.duration)}
-          </span>
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+          <div style={{
+            background: '#f8fafc',
+            borderRadius: 10,
+            padding: 24,
+            margin: '0 24px 0 0',
+            textAlign: 'left',
+            fontWeight: 700,
+            fontSize: 22,
+            minWidth: 320,
+            flex: '0 0 auto'
+          }}>
+            Time in Test<br />
+            <span style={{ fontWeight: 600, fontSize: 20 }}>
+              Entered: {enteredAtInfo.value ? enteredAtInfo.value.toLocaleString() : '-'}
+              {enteredAtInfo.estimated && <span style={{ color: '#f59e42', fontWeight: 400 }}> (estimated)</span>}<br />
+              End: {submission.submitted_at ? new Date(submission.submitted_at).toLocaleString() : '-'}<br />
+              Duration: {formatDuration(submission.duration)}
+            </span>
+          </div>
+          {typeof submission.score === 'number' && (
+            <div style={{ fontWeight: 700, fontSize: 22, color: '#2563eb', marginTop: 24, textAlign: 'right', minWidth: 120 }}>
+              Score: {submission.score.toFixed(1)}%
+            </div>
+          )}
         </div>
         {scheduledStart && (
           <div style={{ marginBottom: 18, background: '#f3f4f6', borderRadius: 8, padding: 16 }}>
@@ -191,14 +200,18 @@ const TestReview = () => {
                   borderRadius: 6,
                   padding: '2px 8px',
                 }}>
-                  {opt}. {q[`option_${opt.toLowerCase()}`]}
+                  {opt}. {q[`option_${opt.toLowerCase()}`] || <span style={{ color: '#64748b' }}>No option</span>}
                   {q.correct_answer === opt && <span style={{ marginLeft: 8, color: '#16a34a', fontWeight: 700 }}>(Correct)</span>}
                   {q.selected_answer === opt && q.selected_answer !== q.correct_answer && <span style={{ marginLeft: 8, color: '#dc2626' }}>(Your Answer)</span>}
                 </div>
               ))}
             </div>
             <div style={{ fontSize: 15 }}>
-              {q.is_correct ? <span style={{ color: '#16a34a', fontWeight: 600 }}>Correct</span> : <span style={{ color: '#dc2626', fontWeight: 600 }}>Incorrect</span>}
+              {q.selected_answer ? (
+                q.is_correct ? <span style={{ color: '#16a34a', fontWeight: 600 }}>Correct</span> : <span style={{ color: '#dc2626', fontWeight: 600 }}>Incorrect</span>
+              ) : (
+                <span style={{ color: '#64748b' }}>No answer</span>
+              )}
             </div>
           </div>
           {renderPagination()}

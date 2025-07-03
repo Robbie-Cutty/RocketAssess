@@ -198,11 +198,8 @@ const Header = () => {
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('authChange', handleAuthChange);
 
-    // Also listen for focus events to check auth when user returns to tab
-    const handleFocus = () => {
-      verifyUserStatus();
-    };
-    window.addEventListener('focus', handleFocus);
+    // Also listen for focus events (in case of tab switch)
+    window.addEventListener('focus', verifyUserStatus);
 
     // Set up periodic verification every 5 minutes
     const intervalId = setInterval(verifyUserStatus, 5 * 60 * 1000);
@@ -212,7 +209,7 @@ const Header = () => {
       clearInterval(intervalId);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('authChange', handleAuthChange);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', verifyUserStatus);
     };
   }, []);
 

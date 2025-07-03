@@ -82,6 +82,7 @@ const TestInviteModal = ({ isOpen, onClose, test, testId, onInvite }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInviteResults([]);
     if (selectedStudents.length === 0) {
       setError('Please select at least one student.');
       return;
@@ -118,18 +119,12 @@ const TestInviteModal = ({ isOpen, onClose, test, testId, onInvite }) => {
     try {
       const res = await api.post('/api/invite-test/', inviteData);
       const data = res.data;
-      if (res.status === 409 && data.duplicates) {
-        setError(
-          `The following students have already been invited to this test: ${data.duplicates.join(', ')}`
-        );
-        setInviteResults([]);
-        return; // Do not close modal
-      }
-      if (res.status === 200) {
+      if (res.status === 200 && data.results) {
+        setInviteResults(data.results);
         setError('');
-        setInviteResults(data.results || []);
-        onInvite(data);
-        onClose();
+        // Optionally call onInvite(data) if you want to close modal on full success
+        // onInvite(data);
+        // onClose();
       } else {
         setError(data?.error || 'Failed to send invites.');
       }
@@ -338,7 +333,7 @@ const TestInviteModal = ({ isOpen, onClose, test, testId, onInvite }) => {
                 <li key={r.email} style={{ marginBottom: 4 }}>
                   <span style={{ fontWeight: 500 }}>{r.email}:</span>{' '}
                   {r.status === 'invited' && <span style={{ color: '#22c55e' }}>Invitation sent</span>}
-                  {r.status === 'duplicate' && <span style={{ color: '#f59e42' }}>Already invited to this test at this time</span>}
+                  {r.status === 'duplicate' && <span style={{ color: '#f59e42' }}>Already invited to this test</span>}
                   {r.status === 'error' && <span style={{ color: '#dc2626' }}>Error: {r.error}</span>}
                 </li>
               ))}
