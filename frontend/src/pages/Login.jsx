@@ -79,13 +79,19 @@ const Login = () => {
       const response = await api.post(endpoint, payload);
       
       if (response.status === 200 && response.data) {
-        // Clear all user-related cookies before setting new ones
+        // Clear all user-related cookies and localStorage before setting new ones
         Cookies.remove('token');
         Cookies.remove('org_code');
         Cookies.remove('org_name');
         Cookies.remove('teacher_name');
         Cookies.remove('teacher_id');
+        Cookies.remove('teacher_pk');
         Cookies.remove('user_email');
+        localStorage.removeItem('teacher_name');
+        localStorage.removeItem('teacher_pk');
+        localStorage.removeItem('student_name');
+        localStorage.removeItem('student_email');
+        sessionStorage.clear();
         
         if (form.role === 'teacher' && response.data.teacher) {
           const teacher = response.data.teacher;

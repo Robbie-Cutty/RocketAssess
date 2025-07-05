@@ -126,8 +126,8 @@ class TestSerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):
         value = html.escape(value.strip())
-        if len(value) < 3 or len(value) > 200:
-            raise serializers.ValidationError('Test name must be between 3 and 200 characters.')
+        if len(value) == 0 or len(value) > 200:
+            raise serializers.ValidationError('Test name must be between 1 and 200 characters.')
         return value
 
     def validate_subject(self, value):

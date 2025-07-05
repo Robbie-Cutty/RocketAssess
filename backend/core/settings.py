@@ -247,3 +247,8 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 
 TIME_ZONE = 'America/Vancouver'
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://192.168.1.71:5173",
+    "http://localhost:5173",
+]

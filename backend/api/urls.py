@@ -14,6 +14,7 @@ urlpatterns = [
     path('login-organization/', views.OrganizationLoginView.as_view(), name='login-organization'),
     path('invite-teachers/', views.TeacherInviteView.as_view(), name='invite-teachers'),
     path('teachers/', views.TeacherListView.as_view(), name='list-teachers'),
+    path('organization/teachers/', views.OrganizationTeachersView.as_view(), name='organization-teachers'),
     
     # Teacher endpoints
     path('register-teacher/', views.TeacherRegisterView.as_view(), name='register-teacher'),

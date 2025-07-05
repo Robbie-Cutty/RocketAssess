@@ -46,6 +46,7 @@ const StudentDashboard = () => {
   const [testFilter, setTestFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('invites');
   const now = new Date();
+  const [completedSearch, setCompletedSearch] = useState('');
 
   const fetchInvites = () => {
     if (!email) return;
@@ -158,8 +159,15 @@ const StudentDashboard = () => {
   const paginatedTests = filteredTests.slice((testPage - 1) * PAGE_SIZE, testPage * PAGE_SIZE);
   
   const sortedCompletedTests = [...completedTests].sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
-  const totalCompletedPages = Math.ceil(sortedCompletedTests.length / PAGE_SIZE);
-  const paginatedCompletedTests = sortedCompletedTests.slice((completedPage - 1) * PAGE_SIZE, completedPage * PAGE_SIZE);
+  const filteredCompletedTests = sortedCompletedTests.filter(test => {
+    const searchLower = completedSearch.toLowerCase();
+    return (
+      test.test_title.toLowerCase().includes(searchLower) ||
+      (test.test_subject && test.test_subject.toLowerCase().includes(searchLower))
+    );
+  });
+  const totalCompletedPages = Math.ceil(filteredCompletedTests.length / PAGE_SIZE);
+  const paginatedCompletedTests = filteredCompletedTests.slice((completedPage - 1) * PAGE_SIZE, completedPage * PAGE_SIZE);
 
   // --- Layout ---
   return (
@@ -318,6 +326,16 @@ const StudentDashboard = () => {
             <div className="student-dashboard-section-header">
               <span className="student-dashboard-section-title"><FaCheckCircle /> Completed Tests</span>
               <button className="student-dashboard-refresh green" onClick={fetchCompletedTests}><FaSyncAlt /> Refresh</button>
+            </div>
+            <div className="student-dashboard-controls" style={{ marginBottom: 10 }}>
+              <input
+                type="text"
+                placeholder="Search completed tests..."
+                value={completedSearch}
+                onChange={e => { setCompletedSearch(e.target.value); setCompletedPage(1); }}
+                className="student-dashboard-search"
+                style={{ maxWidth: 320 }}
+              />
             </div>
             {paginatedCompletedTests.length === 0 ? (
               <div className="student-dashboard-empty">No completed tests found.</div>

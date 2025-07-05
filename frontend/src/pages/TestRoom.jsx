@@ -224,6 +224,72 @@ const TestRoom = () => {
             No timer set for this test. Please contact your teacher.
           </div>
         )}
+        
+        {/* Navigation Buttons */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#64748b' }}>
+            Question Navigation
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: 8, 
+            justifyContent: 'center',
+            maxWidth: '100%'
+          }}>
+            {questions.map((question, index) => {
+              const isAnswered = answers[question.id] !== undefined;
+              const isCurrent = index === current;
+              
+              let buttonStyle = {
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: '2px solid',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                color: 'white'
+              };
+              
+              if (isCurrent) {
+                buttonStyle = {
+                  ...buttonStyle,
+                  backgroundColor: '#2563eb',
+                  borderColor: '#2563eb'
+                };
+              } else if (isAnswered) {
+                buttonStyle = {
+                  ...buttonStyle,
+                  backgroundColor: '#16a34a',
+                  borderColor: '#16a34a'
+                };
+              } else {
+                buttonStyle = {
+                  ...buttonStyle,
+                  backgroundColor: '#dc2626',
+                  borderColor: '#dc2626'
+                };
+              }
+              
+              return (
+                <button
+                  key={question.id}
+                  style={buttonStyle}
+                  onClick={() => setCurrent(index)}
+                  title={`Question ${index + 1}${isAnswered ? ' (Answered)' : ' (Unanswered)'}`}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        
         <div style={{ fontWeight: 600, fontSize: 18, margin: '24px 0 12px 0' }}>
           Question {current + 1} of {questions.length}
         </div>

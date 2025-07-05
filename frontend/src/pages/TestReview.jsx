@@ -97,9 +97,9 @@ const TestReview = () => {
         </button>
         {pages.map((p, idx) =>
           p === '...'
-            ? <div key={idx} style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#888' }}>...</div>
+            ? <div key={`dots-${idx}`} style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#888' }}>...</div>
             : <button
-                key={p}
+                key={`page-${p}`}
                 onClick={() => setCurrent(p)}
                 style={{
                   width: 48, height: 48, borderRadius: 12, border: 'none',

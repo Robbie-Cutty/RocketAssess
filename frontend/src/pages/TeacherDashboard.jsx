@@ -120,6 +120,17 @@ const TeacherDashboard = () => {
   const [duplicateInvites, setDuplicateInvites] = useState([]);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
+  const [showSetPoints, setShowSetPoints] = useState(false);
+  const [setPointsValue, setSetPointsValue] = useState(1);
+  const [setPointsLoading, setSetPointsLoading] = useState(false);
+  const [setPointsError, setSetPointsError] = useState('');
+  const [setPointsSuccess, setSetPointsSuccess] = useState('');
+
+  const [editingDisabled, setEditingDisabled] = useState(false);
+
+  // Track which tests are disabled (editing not allowed)
+  const [testEditingDisabled, setTestEditingDisabled] = useState({});
+
   // Initialize authentication data
   useEffect(() => {
     const initializeAuth = () => {
@@ -287,11 +298,14 @@ const TeacherDashboard = () => {
         const maxEnd = new Date(Math.max(...ends));
         const duration = res.data[0].duration_minutes; // assume all invites have same duration
         setSelectedTestWindow({ start: minStart, end: maxEnd, duration });
+        setEditingDisabled(true);
       } else {
         setSelectedTestWindow(null);
+        setEditingDisabled(false);
       }
     } catch {
       setSelectedTestWindow(null);
+      setEditingDisabled(false);
     }
   };
 
@@ -656,6 +670,56 @@ const TeacherDashboard = () => {
     if (tests.length > 0) fetchTimeRanges();
   }, [tests]);
 
+  const handleSetPointsAll = async () => {
+    setSetPointsLoading(true);
+    setSetPointsError('');
+    setSetPointsSuccess('');
+    const value = Number(setPointsValue);
+    if (isNaN(value) || value < 1) {
+      setSetPointsError('Point value must be a positive number.');
+      setSetPointsLoading(false);
+      return;
+    }
+    try {
+      // Update all questions in backend, sending all required fields
+      await Promise.all(questions.map(q =>
+        api.patch(`/api/questions/${q.id}/`, {
+          text: q.text,
+          option_a: q.option_a,
+          option_b: q.option_b,
+          option_c: q.option_c,
+          option_d: q.option_d,
+          correct_answer: q.correct_answer,
+          point_value: value
+        })
+      ));
+      // Update UI
+      setQuestions(prev => prev.map(q => ({ ...q, point_value: value })));
+      setSetPointsSuccess('All questions updated!');
+    } catch {
+      setSetPointsError('Failed to update all questions.');
+    } finally {
+      setSetPointsLoading(false);
+    }
+  };
+
+  // Fetch editing disabled status for all tests
+  useEffect(() => {
+    const fetchAllTestInviteStatus = async () => {
+      const status = {};
+      await Promise.all(tests.map(async (test) => {
+        try {
+          const res = await api.get(`/api/list-test-invites/?test_id=${test.id}`);
+          status[test.id] = Array.isArray(res.data) && res.data.length > 0;
+        } catch {
+          status[test.id] = false;
+        }
+      }));
+      setTestEditingDisabled(status);
+    };
+    if (tests.length > 0) fetchAllTestInviteStatus();
+  }, [tests]);
+
   if (isLoading) {
     return (
       <div style={{padding: 40, textAlign: 'center', fontSize: 18}}>
@@ -811,6 +875,12 @@ const TeacherDashboard = () => {
                     <span style={{ fontWeight: 600, fontSize: 17 }}>
                       {test.name} <span style={{ color: '#2563eb', fontWeight: 500, fontSize: 15 }}>
                         ({testPoints[test.id] !== undefined ? `${testPoints[test.id]} pts` : '...' })
+                        {testEditingDisabled[test.id] === true && (
+                          <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 13, marginLeft: 8 }} title="Editing disabled for this test">[Editing Disabled]</span>
+                        )}
+                        {testEditingDisabled[test.id] === false && (
+                          <span style={{ color: '#22c55e', fontWeight: 600, fontSize: 13, marginLeft: 8 }} title="Editing enabled for this test">[Editable]</span>
+                        )}
                       </span>
                     </span>
                     <span
@@ -996,7 +1066,7 @@ const TeacherDashboard = () => {
                 ) : (
                   <QuestionPool
                     testId={selectedTest.id}
-                    onAdd={async (q) => {
+                    onAdd={editingDisabled ? undefined : async (q) => {
                       setAddLoading(true);
                       setAddError('');
                       try {
@@ -1047,27 +1117,50 @@ const TeacherDashboard = () => {
                     addedQuestionIds={questions.map(q => q.id)}
                   />
                 )}
+                {editingDisabled && (
+                  <div style={{ color: '#dc2626', fontWeight: 600, marginTop: 18, textAlign: 'center' }}>
+                    Editing is disabled because students have already been invited to this test.
+                  </div>
+                )}
               </div>
               <div style={{ flex: '2 1 700px', minWidth: 400, maxWidth: 900 }}>
                 {questions.length > 1 && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 24, justifyContent: 'center' }}>
-                    {questions.map((q, idx) => (
-                      <button
-                        key={q.id || idx}
-                        style={{
-                          padding: '8px 16px',
-                          borderRadius: 8,
-                          border: idx === selectedQIndex ? '2px solid #2563eb' : '1px solid #e5e7eb',
-                          background: idx === selectedQIndex ? '#2563eb' : '#fff',
-                          color: idx === selectedQIndex ? '#fff' : '#222',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => setSelectedQIndex(idx)}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
+                    {(() => {
+                      const total = questions.length;
+                      const current = selectedQIndex;
+                      let pages = [];
+                      if (total <= 10) {
+                        for (let i = 0; i < total; i++) pages.push(i);
+                      } else {
+                        pages.push(0);
+                        if (current > 4) pages.push('...');
+                        for (let i = Math.max(1, current - 2); i <= Math.min(total - 2, current + 2); i++) {
+                          if (i !== 0 && i !== total - 1) pages.push(i);
+                        }
+                        if (current < total - 5) pages.push('...');
+                        pages.push(total - 1);
+                      }
+                      return pages.map((p, idx) =>
+                        p === '...'
+                          ? <span key={"dots-" + idx} style={{ padding: '8px 12px', color: '#888', fontWeight: 700 }}>...</span>
+                          : <button
+                              key={questions[p]?.id || p}
+                              style={{
+                                padding: '8px 16px',
+                                borderRadius: 8,
+                                border: p === current ? '2px solid #2563eb' : '1px solid #e5e7eb',
+                                background: p === current ? '#2563eb' : '#fff',
+                                color: p === current ? '#fff' : '#222',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => setSelectedQIndex(p)}
+                            >
+                              {p + 1}
+                            </button>
+                      );
+                    })()}
                   </div>
                 )}
                 {questions.length === 0 ? (
@@ -1128,14 +1221,14 @@ const TeacherDashboard = () => {
                       })}
                     </div>
                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-                      <button className="btn btn-xs btn-outline" onClick={() => handleEditQuestion(questions[selectedQIndex], selectedQIndex)}>
+                      <button className="btn btn-xs btn-outline" onClick={() => handleEditQuestion(questions[selectedQIndex], selectedQIndex)} disabled={editingDisabled}>
                         Edit
                       </button>
-                      <button className="btn btn-xs btn-danger" onClick={() => handleDeleteQuestion(questions[selectedQIndex], selectedQIndex)}>
+                      <button className="btn btn-xs btn-danger" onClick={() => handleDeleteQuestion(questions[selectedQIndex], selectedQIndex)} disabled={editingDisabled}>
                         Delete
                       </button>
                     </div>
-                    {editingQ === questions[selectedQIndex].id && (
+                    {editingQ === questions[selectedQIndex].id && !editingDisabled && (
                       <form
                         onSubmit={handleEditFormSubmit}
                         style={{
@@ -1205,6 +1298,28 @@ const TeacherDashboard = () => {
                       >
                         Next
                       </button>
+                    </div>
+                    <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <button className="btn btn-xs btn-primary" onClick={() => setShowSetPoints(v => !v)} disabled={editingDisabled}>
+                        {showSetPoints ? 'Cancel Set Points' : 'Set All Points'}
+                      </button>
+                      {showSetPoints && !editingDisabled && (
+                        <>
+                          <input
+                            type="number"
+                            min="1"
+                            value={setPointsValue}
+                            onChange={e => setSetPointsValue(e.target.value)}
+                            style={{ width: 80, padding: '6px 10px', borderRadius: 6, border: '1px solid #bdbdbd', fontSize: 15 }}
+                            disabled={setPointsLoading}
+                          />
+                          <button className="btn btn-xs btn-success" onClick={handleSetPointsAll} disabled={setPointsLoading}>
+                            {setPointsLoading ? 'Applying...' : 'Apply to All'}
+                          </button>
+                          {setPointsError && <span style={{ color: '#dc2626', marginLeft: 8 }}>{setPointsError}</span>}
+                          {setPointsSuccess && <span style={{ color: '#16a34a', marginLeft: 8 }}>{setPointsSuccess}</span>}
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

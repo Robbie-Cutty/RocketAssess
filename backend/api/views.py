@@ -130,7 +130,7 @@ def check_authentication(request):
             raise PermissionDenied("Teacher not found")
     elif user_type == 'organization':
         try:
-            org = Organization.objects.get(org_code=email)
+            org = Organization.objects.get(email=email)
             if not org.is_logged_in:
                 raise PermissionDenied("User not logged in")
         except Organization.DoesNotExist:
@@ -784,8 +784,12 @@ def test_detail(request):
 @login_required
 def list_test_invites(request):
     from .models import TestInvite
-    invites = TestInvite.objects.all().values()
-    return Response(list(invites))
+    test_id = request.GET.get('test_id')
+    qs = TestInvite.objects.all()
+    if test_id:
+        qs = qs.filter(test_id=test_id)
+    invites = list(qs.values())
+    return Response(invites)
 
 @csrf_exempt
 @api_view(['GET'])
@@ -1352,4 +1356,25 @@ def health_check(request):
             'status': 'unhealthy',
             'error': str(e),
             'timestamp': datetime.now().isoformat()
-        }, status=500) 
+        }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class OrganizationTeachersView(APIView):
+    def dispatch(self, request, *args, **kwargs):
+        check_authentication(request)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        user_type = request.META.get('HTTP_X_USER_TYPE')
+        user_email = request.META.get('HTTP_X_USER_EMAIL')
+        if user_type != 'organization':
+            return Response({'error': 'Access denied. Organization only.'}, status=403)
+        try:
+            org = Organization.objects.get(email=user_email)
+        except Organization.DoesNotExist:
+            return Response({'error': 'Organization not found.'}, status=404)
+        teachers = Teacher.objects.filter(org=org).values('id', 'teacher_id', 'name', 'email', 'gender', 'created_at')
+        return Response(list(teachers), status=200)
+
+# NOTE: Register this endpoint in urls.py as:
+# path('organization/teachers/', views.OrganizationTeachersView.as_view(), name='organization-teachers'), 
