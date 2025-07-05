@@ -304,64 +304,114 @@ const CreateTest = () => {
           </>
         ) : (
           <>
-            <h2 className="text-xl font-bold mb-4 text-primary">Add Questions</h2>
+            {/* Test Details Card */}
+            <div className="card mb-6" style={{ padding: 24, borderRadius: 16, background: '#f8fafc', boxShadow: '0 2px 8px #0001', border: '1px solid #e5e7eb' }}>
+              <h2 className="text-xl font-bold mb-2 text-primary">Test Details</h2>
+              <div><b>Name:</b> {form.name}</div>
+              <div><b>Subject:</b> {form.subject || <span style={{ color: '#888' }}>None</span>}</div>
+              <div><b>Description:</b> {form.description || <span style={{ color: '#888' }}>None</span>}</div>
+            </div>
+
+            {/* Add from Question Pool Section */}
+            <h2 className="text-lg font-semibold mb-2 text-primary">Add from Question Pool</h2>
             <QuestionPool
               testId={testId}
               onAdd={handleAddFromPool}
               addedQuestionIds={questions.map(q => q.id)}
             />
-            <form onSubmit={handleQSubmit} autoComplete="off">
-              <div className="form-group">
-                <label>Question *</label>
-                <input type="text" name="text" value={qForm.text} onChange={handleQChange} required />
+
+            {/* Create New Question Section */}
+            <div className="card mt-8 mb-6" style={{ padding: 24, borderRadius: 16, background: '#fff', boxShadow: '0 2px 8px #0001', border: '1px solid #e5e7eb' }}>
+              <h2 className="text-lg font-semibold mb-2 text-primary">Create New Question</h2>
+              <form onSubmit={handleQSubmit} autoComplete="off" style={{ marginBottom: 16 }}>
+                <div className="form-group mb-2">
+                  <label>Question *</label>
+                  <input type="text" name="text" value={qForm.text} onChange={handleQChange} required />
+                </div>
+                <div className="form-group grid grid-cols-2 gap-2 mb-2">
+                  <input type="text" name="option_a" placeholder="Option A" value={qForm.option_a} onChange={handleQChange} required />
+                  <input type="text" name="option_b" placeholder="Option B" value={qForm.option_b} onChange={handleQChange} required />
+                  <input type="text" name="option_c" placeholder="Option C" value={qForm.option_c} onChange={handleQChange} required />
+                  <input type="text" name="option_d" placeholder="Option D" value={qForm.option_d} onChange={handleQChange} required />
+                </div>
+                <div className="form-group mb-2">
+                  <label>Correct Answer</label>
+                  <select name="correct_answer" value={qForm.correct_answer} onChange={handleQChange}>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                  </select>
+                </div>
+                <div className="form-group mb-2">
+                  <label>Point Value</label>
+                  <input type="number" name="point_value" min="1" value={qForm.point_value} onChange={handleQChange} required className="w-20 px-2 py-1 border rounded" />
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button type="submit" className="btn btn-primary" disabled={qLoading} style={{ minWidth: 120 }}>
+                    {qLoading ? 'Adding...' : (editingId ? 'Update Question' : 'Add Question')}
+                  </button>
+                  <button type="button" className="btn btn-outline" onClick={() => { setQForm(initialQuestion); setEditingId(null); setEditingIndex(null); setQError(''); setQSuccess(''); }} style={{ minWidth: 120 }}>Clear</button>
+                </div>
+                {qError && <div className="alert alert-danger mt-2">{qError}</div>}
+                {qSuccess && <div className="alert alert-success mt-2">{qSuccess}</div>}
+              </form>
+              {/* Live Preview */}
+              <div className="mt-4 p-4 rounded" style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+                <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>Live Preview</div>
+                <div style={{ fontWeight: 600 }}>{qForm.text || <span style={{ color: '#888' }}>Question text...</span>}</div>
+                <div style={{ marginTop: 8 }}>
+                  <div>A: {qForm.option_a || <span style={{ color: '#888' }}>Option A</span>}</div>
+                  <div>B: {qForm.option_b || <span style={{ color: '#888' }}>Option B</span>}</div>
+                  <div>C: {qForm.option_c || <span style={{ color: '#888' }}>Option C</span>}</div>
+                  <div>D: {qForm.option_d || <span style={{ color: '#888' }}>Option D</span>}</div>
+                </div>
+                <div style={{ marginTop: 8, color: '#16a34a', fontWeight: 600 }}>Correct: {qForm.correct_answer}</div>
+                <div style={{ color: '#2563eb', fontWeight: 600 }}>Points: {qForm.point_value}</div>
               </div>
-              <div className="form-group grid grid-cols-2 gap-2">
-                <input type="text" name="option_a" placeholder="Option A" value={qForm.option_a} onChange={handleQChange} required />
-                <input type="text" name="option_b" placeholder="Option B" value={qForm.option_b} onChange={handleQChange} required />
-                <input type="text" name="option_c" placeholder="Option C" value={qForm.option_c} onChange={handleQChange} required />
-                <input type="text" name="option_d" placeholder="Option D" value={qForm.option_d} onChange={handleQChange} required />
-              </div>
-              <div className="form-group">
-                <label>Correct Answer</label>
-                <select name="correct_answer" value={qForm.correct_answer} onChange={handleQChange}>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="D">D</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Point Value</label>
-                <input type="number" name="point_value" min="1" value={qForm.point_value} onChange={handleQChange} required className="w-20 px-2 py-1 border rounded" />
-              </div>
-              {qError && <div className="alert alert-danger mb-2">{qError}</div>}
-              {qSuccess && <div className="alert alert-success mb-2">{qSuccess}</div>}
-              <button type="submit" className="btn btn-primary w-full" disabled={qLoading}>
-                {qLoading ? 'Adding...' : 'Add Question'}
-              </button>
-            </form>
-            {questions.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-2">Questions Added</h3>
-                <ul className="pl-4 mb-4">
-                  {questions.map((q, idx) => (
-                    <li key={q.id || idx} className="mb-1 flex items-start gap-2">
-                      <div className="flex-1">
-                        <div><b>Q:</b> {q.text}</div>
-                        <div className="text-sm">A: {q.option_a} | B: {q.option_b} | C: {q.option_c} | D: {q.option_d}</div>
-                        <div className="text-xs text-success">Correct: {q.correct_answer}</div>
-                        <div className="text-xs">Points: {q.point_value}</div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <button className="btn btn-xs btn-outline" onClick={() => handleEdit(q, idx)}>Edit</button>
-                        <button className="btn btn-xs btn-danger" onClick={() => handleDelete(q, idx)}>Delete</button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <button className="btn btn-outline w-full mt-2" onClick={handleFinish}>
+            </div>
+
+            {/* Questions Added Section */}
+            <div className="card mt-8" style={{ padding: 24, borderRadius: 16, background: '#fff', boxShadow: '0 2px 8px #0001', border: '1px solid #e5e7eb' }}>
+              <h2 className="text-lg font-semibold mb-2 text-primary">Questions Added ({questions.length})</h2>
+              {questions.length > 0 ? (
+                <table className="table-auto w-full mb-4">
+                  <thead>
+                    <tr style={{ background: '#f3f4f6' }}>
+                      <th className="px-2 py-1">#</th>
+                      <th className="px-2 py-1">Question</th>
+                      <th className="px-2 py-1">Choices</th>
+                      <th className="px-2 py-1">Correct</th>
+                      <th className="px-2 py-1">Points</th>
+                      <th className="px-2 py-1">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {questions.map((q, idx) => (
+                      <tr key={q.id || idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <td className="px-2 py-1">{idx + 1}</td>
+                        <td className="px-2 py-1">{q.text}</td>
+                        <td className="px-2 py-1">
+                          A: {q.option_a} <br />
+                          B: {q.option_b} <br />
+                          C: {q.option_c} <br />
+                          D: {q.option_d}
+                        </td>
+                        <td className="px-2 py-1 text-success">{q.correct_answer}</td>
+                        <td className="px-2 py-1 text-primary">{q.point_value}</td>
+                        <td className="px-2 py-1">
+                          <button className="btn btn-xs btn-outline mr-2" onClick={() => handleEdit(q, idx)}>Edit</button>
+                          <button className="btn btn-xs btn-danger" onClick={() => { if(window.confirm('Are you sure you want to delete this question?')) handleDelete(q, idx); }}>Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-secondary">No questions added yet.</p>
+              )}
+            </div>
+            <button className="btn btn-outline w-full mt-4" onClick={handleFinish}>
               Finish &amp; Go to Dashboard
             </button>
           </>
